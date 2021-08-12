@@ -222,7 +222,7 @@ choroplethrZip::zip_choropleth(map_example, state_zoom = "kansas", num_colors = 
 rm(list = c("copy_example", "dist_example", "map_example"))
 ```
 
-To simulate simplicity and complexity, the number of components in each new brand is drawn from a Poisson distribution where $\lambda$ is the parameter of interest (henceforth complexity). Below is an example of the normalized probabilities of creating a brand with between one and four components when $\lambda$ is 0.5, 3, and 15.
+To simulate simplicity and complexity, the number of components in each new brand is drawn from a Poisson distribution where $\lambda$ is the parameter of interest (henceforth complexity). Below is an example of the normalized probabilities of creating a brand with between one and four components when $\lambda$ is 0.5, 3, and 15. Note that the normalization here is only for plotting purposes - We will using the raw output of `dpois` as the `prob` argument of base R's `sample` function.
 
 ```{r echo = FALSE, fig.align="center", fig.width=5, fig.height=3}
 #create data frame for poisson example
