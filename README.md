@@ -303,21 +303,21 @@ ABM collects the following summary statistics at the end of each year:
         3.  Shannon’s diversity index
         4.  Simpson’s diversity index
     -   Spatial diversity:
-        5.  Jaccard index of beta diversity (zip codes)
-        6.  Morisita-Horn index of beta diversity (zip codes)
-        7.  Jaccard index of beta diversity (counties)
-        8.  Morisita-Horn index of beta diversity (counties)
+        1.  Jaccard index of beta diversity (zip codes)
+        2.  Morisita-Horn index of beta diversity (zip codes)
+        3.  Jaccard index of beta diversity (counties)
+        4.  Morisita-Horn index of beta diversity (counties)
 -   For brands:
     -   Overall diversity:
-        9.  Proportion of brands that are the most common type
-        10. Proportion of brands that are the most rare type
-        11. Shannon’s diversity index
-        12. Simpson’s diversity index
+        1.  Proportion of brands that are the most common type
+        2.  Proportion of brands that are the most rare type
+        3.  Shannon’s diversity index
+        4.  Simpson’s diversity index
     -   Spatial diversity:
-        13. Jaccard index of beta diversity (zip codes)
-        14. Morisita-Horn index of beta diversity (zip codes)
-        15. Jaccard index of beta diversity (counties)
-        16. Morisita-Horn index of beta diversity (counties)
+        1.  Jaccard index of beta diversity (zip codes)
+        2.  Morisita-Horn index of beta diversity (zip codes)
+        3.  Jaccard index of beta diversity (counties)
+        4.  Morisita-Horn index of beta diversity (counties)
 
 For all diversity metrics we calculated their Hill number counterparts,
 because they are [measured on the same
@@ -426,7 +426,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 1.404144 mins
+    ## Time difference of 1.387562 mins
 
 ``` r
 #print output
@@ -434,17 +434,17 @@ components_only
 ```
 
     ##            [,1]         [,2]     [,3]     [,4]      [,5]      [,6]      [,7]
-    ## [1,] 0.07060354 0.0005723205 68.32879 42.32907 0.1667664 0.2938594 0.4947186
-    ## [2,] 0.06876187 0.0006243984 72.55337 44.51068 0.1728096 0.2994647 0.5178066
-    ## [3,] 0.06689198 0.0007799298 76.43395 46.70816 0.1782026 0.3020463 0.5378355
+    ## [1,] 0.07018457 0.0006247885 68.58201 42.40308 0.1667750 0.2904465 0.5005483
+    ## [2,] 0.06820845 0.0008333984 72.36487 44.43380 0.1717345 0.2940768 0.5209235
+    ## [3,] 0.06628985 0.0008856012 76.47177 46.78457 0.1770495 0.2950631 0.5393939
     ##           [,8]        [,9]        [,10]    [,11]    [,12]       [,13]
-    ## [1,] 0.7635170 0.003024437 6.048875e-05 4414.890 2603.370 0.001643871
-    ## [2,] 0.7614024 0.002973481 6.068329e-05 4622.210 2722.517 0.001544123
-    ## [3,] 0.7590734 0.002861317 6.087909e-05 4811.039 2829.420 0.001455316
+    ## [1,] 0.7575101 0.003205904 6.048875e-05 4408.703 2589.655 0.001639007
+    ## [2,] 0.7601405 0.002973481 6.068329e-05 4583.784 2696.135 0.001550041
+    ## [3,] 0.7432208 0.002678680 6.087909e-05 4784.257 2820.900 0.001461006
     ##            [,14]       [,15]      [,16]
-    ## [1,] 0.002464474 0.010461031 0.02298364
-    ## [2,] 0.002526558 0.009842374 0.02278508
-    ## [3,] 0.002555865 0.009286425 0.02189881
+    ## [1,] 0.002388958 0.010427134 0.02092151
+    ## [2,] 0.002501308 0.009866918 0.02174902
+    ## [3,] 0.002527303 0.009295427 0.02084244
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -456,7 +456,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 2.634645 mins
+    ## Time difference of 2.660299 mins
 
 ``` r
 #print output
@@ -464,17 +464,17 @@ components_angles
 ```
 
     ##            [,1]         [,2]     [,3]     [,4]       [,5]      [,6]      [,7]
-    ## [1,] 0.06928966 2.603895e-05 134.0088 64.08295 0.03571139 0.2126536 0.1274880
-    ## [2,] 0.06690462 2.605320e-05 142.7693 67.56712 0.03394795 0.2115194 0.1220404
-    ## [3,] 0.06457074 2.604709e-05 151.3255 71.39508 0.03319902 0.2103214 0.1201841
+    ## [1,] 0.06904818 2.605592e-05 134.9163 64.50722 0.03566272 0.2095563 0.1285565
+    ## [2,] 0.06652774 2.604845e-05 144.0773 68.18325 0.03395022 0.2033351 0.1223089
+    ## [3,] 0.06454385 2.603624e-05 151.7355 71.50228 0.03338719 0.2076553 0.1207325
     ##           [,8]        [,9]        [,10]    [,11]    [,12]        [,13]
-    ## [1,] 0.6995181 0.001149286 6.048875e-05 8122.726 5954.401 0.0007542406
-    ## [2,] 0.6917964 0.001152983 6.068329e-05 8286.481 6072.529 0.0007199774
-    ## [3,] 0.6874629 0.001156703 6.087909e-05 8463.114 6216.614 0.0006836783
+    ## [1,] 0.7152470 0.001209775 6.048875e-05 8156.240 5994.890 0.0007512737
+    ## [2,] 0.4793707 0.001152983 6.068329e-05 8350.465 6151.767 0.0007112045
+    ## [3,] 0.4676617 0.001156703 6.087909e-05 8490.041 6233.273 0.0006817583
     ##             [,14]       [,15]       [,16]
-    ## [1,] 0.0008995754 0.004881742 0.007680596
-    ## [2,] 0.0009755317 0.004660413 0.007718895
-    ## [3,] 0.0009798987 0.004426268 0.007608850
+    ## [1,] 0.0008828658 0.004898033 0.008218544
+    ## [2,] 0.0009384992 0.004601657 0.004582645
+    ## [3,] 0.0010069898 0.004405480 0.004482981
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the 16 summary statistics

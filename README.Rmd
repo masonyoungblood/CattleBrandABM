@@ -254,21 +254,21 @@ The ABM is initialized with the earliest year of observed data and runs through 
     3. Shannon's diversity index
     4. Simpson's diversity index
   - Spatial diversity:
-    5. Jaccard index of beta diversity (zip codes)
-    6. Morisita-Horn index of beta diversity (zip codes)
-    7. Jaccard index of beta diversity (counties)
-    8. Morisita-Horn index of beta diversity (counties)
+    1. Jaccard index of beta diversity (zip codes)
+    2. Morisita-Horn index of beta diversity (zip codes)
+    3. Jaccard index of beta diversity (counties)
+    4. Morisita-Horn index of beta diversity (counties)
 * For brands:
   - Overall diversity:
-    9. Proportion of brands that are the most common type
-    10. Proportion of brands that are the most rare type
-    11. Shannon's diversity index
-    12. Simpson's diversity index
+    1. Proportion of brands that are the most common type
+    2. Proportion of brands that are the most rare type
+    3. Shannon's diversity index
+    4. Simpson's diversity index
   - Spatial diversity:
-    13. Jaccard index of beta diversity (zip codes)
-    14. Morisita-Horn index of beta diversity (zip codes)
-    15. Jaccard index of beta diversity (counties)
-    16. Morisita-Horn index of beta diversity (counties)
+    1. Jaccard index of beta diversity (zip codes)
+    2. Morisita-Horn index of beta diversity (zip codes)
+    3. Jaccard index of beta diversity (counties)
+    4. Morisita-Horn index of beta diversity (counties)
 
 For all diversity metrics we calculated their Hill number counterparts, because they are [measured on the same scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and [better account for relative abundance](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-0133.1). Shannon's diversity index emphasizes more rare types whereas Simpson's diversity index emphasizes more common types. The Jaccard and Morisita-Horn indices were similarly chosen for their complementarity. The Morisita-Horn index is a commonly used [abundance-based](https://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2005.00489.x) beta diversity index, whereas the Jaccard index is the most robust of the [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100) beta diversity indices to sampling error. We calculated beta diversity at both the zip code and county-level to assess spatial diversity at two different resolutions.
 
