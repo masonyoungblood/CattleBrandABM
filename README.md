@@ -129,33 +129,50 @@ geographic data and subset our brands to only include those registered
 in the state of Kansas.
 
 ``` r
-#get all kansas zip codes and construct all_zips, a data table with zip codes and counties (for now)
-data("zip.regions", package = "choroplethrZip")
-all_zips <- sort(as.numeric(unique(zip.regions[which(zip.regions$state.name == "kansas"),]$region)))
-all_zips <- data.table::data.table(zip = all_zips, county = zip.regions$county.fips.numeric[match(all_zips, zip.regions$region)])
+#get all kansas zip codes
+data("zip_code_db", package = "zipcodeR")
+zip_code_db <- zip_code_db[which(zip_code_db$state == "KS"), ]
+
+#identify zip codes with missing location data
+missing_locations <- which(is.na(zip_code_db$lat))
+
+#save zip codes with missing locations, to manually fill as CSV file outside of R using Google Maps
+#sink("location_data/missing_zips.txt")
+#cat(zip_code_db$zipcode[missing_locations], sep = "\n")
+#sink()
+
+#add in found locations
+found <- read.csv("location_data/missing_zips_found.txt", header = FALSE)
+zip_code_db$lat[missing_locations] <- found$V2
+zip_code_db$lng[missing_locations] <- found$V3
+
+#construct all_zips, a data table with zip codes, counties, latitudes, and longitudes
+all_zips <- data.table::data.table(zip = as.numeric(zip_code_db$zipcode), county = as.factor(zip_code_db$county), lat = zip_code_db$lat, lon = zip_code_db$lng)
+
+#save
+save(all_zips, file = "location_data/all_zips.RData")
 
 #subset brands to only include those from kansas
 brands <- brands[which(brands$location %in% all_zips$zip), ]
+
+#remove temporary objects
+rm(list = c("zip_code_db", "missing_locations", "found"))
 ```
 
-For our agent-based model (ABM) we will also need the pairwise distances
-between all of the zip codes in Kansas, so let’s go ahead and collect
-that (and save the object after, because it takes a while).
+For our agent-based model (ABM) we will also need the pairwise geodesic
+distances between all of the zip codes in Kansas, so let’s go ahead and
+collect that (and save the object after, because it takes a while).
 
 ``` r
-#calculate pairwise distances between zip codes
-zip_dists <- proxy::dist(all_zips, method = zipcodeR::zip_distance)
+#calculate pairwise geodesic distances (in kilometers) between zip codes
+zip_dists <- geodist::geodist(all_zips[, 3:4], measure = "geodesic")/1000
 
-#convert to matrix and clean up
-zip_dists <- as.matrix(zip_dists)
-colnames(zip_dists) <- all_zips
-rownames(zip_dists) <- all_zips
-
-#convert from miles to kilometers
-zip_dists <- zip_dists*1.609344
+#add row and column names
+colnames(zip_dists) <- all_zips$zip
+rownames(zip_dists) <- all_zips$zip
 
 #save
-save(zip_dists, file = "zip_dists.RData")
+save(zip_dists, file = "location_data/zip_dists.RData")
 ```
 
 Now we need to turn our brand data into a numeric matrix so it is
@@ -263,13 +280,14 @@ one is proportional to their observed frequencies, and values greater
 than one increase their influence beyond their observed frequencies.
 
 The map below shows an example of copying and distinctiveness radii (200
-km and 100 km, respectively) around a target zip code, highlighted in
-the darkest blue color. In this example, components and angles within
-the larger copying radius would be more likely to be appear in the
-target zip code, whereas brands within the smaller distinctiveness
-radius would be less likely to be appear. One issue that this map
-highlights is that a couple of Kansas zip codes appear to be left out of
-the zip code parsing. This issue is moving to the top of the to-do list!
+km and 100 km, respectively) around a target zip code, shown by the
+black triangle. In this example, components and angles within the larger
+copying radius (blue) would be more likely to be appear in the target
+zip code, whereas brands within the smaller distinctiveness radius (red)
+would be less likely to be appear. Here we plot the geographic centroids
+of each zip code rather than their boundaries, as the only shapefiles
+available at the zip code level are for the US Census’ “zip code
+tabulation areas”, which do not include all locations in the dataset.
 
 <img src="README_files/figure-gfm/unnamed-chunk-12-1.png" style="display: block; margin: auto;" />
 
@@ -402,7 +420,7 @@ the sizes of the two radii.
 round(min(zip_dists[which(zip_dists != 0)]))
 ```
 
-    ## [1] 1
+    ## [1] 0
 
 ``` r
 round(max(zip_dists))
@@ -428,7 +446,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 1.395407 mins
+    ## Time difference of 1.414333 mins
 
 ``` r
 #print output
@@ -436,17 +454,17 @@ components_only
 ```
 
     ##            [,1]         [,2]     [,3]     [,4]      [,5]      [,6]      [,7]
-    ## [1,] 0.06950439 0.0005720526 68.25413 42.34617 0.1668011 0.2793161 0.4959307
-    ## [2,] 0.06700468 0.0007020281 72.58495 44.77798 0.1728357 0.2874855 0.5191919
-    ## [3,] 0.06480903 0.0009626392 76.71919 47.16924 0.1784107 0.2901105 0.5393939
+    ## [1,] 0.07045697 0.0005981950 68.19362 42.19979 0.1554457 0.2303436 0.5011255
+    ## [2,] 0.06822028 0.0007811483 72.16554 44.37019 0.1605980 0.2456650 0.5205195
+    ## [3,] 0.06571302 0.0008859011 76.11451 46.72781 0.1653622 0.2503276 0.5388167
     ##           [,8]        [,9]        [,10]    [,11]    [,12]       [,13]
-    ## [1,] 0.7497177 0.002963949 6.048875e-05 4390.896 2576.181 0.001647099
-    ## [2,] 0.7497423 0.002973481 6.068329e-05 4590.133 2703.921 0.001554441
-    ## [3,] 0.7469219 0.002922197 6.087909e-05 4792.303 2826.811 0.001464097
-    ##            [,14]       [,15]      [,16]
-    ## [1,] 0.002431444 0.010458654 0.02167428
-    ## [2,] 0.002478244 0.009882933 0.02156193
-    ## [3,] 0.002480242 0.009310821 0.02122958
+    ## [1,] 0.7698631 0.002715751 6.035003e-05 4372.970 2578.462 0.001550687
+    ## [2,] 0.7908359 0.002663761 6.054002e-05 4543.377 2677.202 0.001469857
+    ## [3,] 0.7850806 0.002550711 6.073120e-05 4742.854 2804.920 0.001385987
+    ##            [,14]      [,15]      [,16]
+    ## [1,] 0.001873306 0.01069938 0.02294759
+    ## [2,] 0.002038406 0.01015332 0.02697193
+    ## [3,] 0.002086739 0.00958875 0.02585112
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -458,7 +476,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 2.629091 mins
+    ## Time difference of 2.645032 mins
 
 ``` r
 #print output
@@ -466,17 +484,17 @@ components_angles
 ```
 
     ##            [,1]         [,2]     [,3]     [,4]       [,5]      [,6]      [,7]
-    ## [1,] 0.06851168 2.601051e-05 135.9131 65.04590 0.03682449 0.2123811 0.1314221
-    ## [2,] 0.06627619 2.603150e-05 143.8167 68.50828 0.03569138 0.2070694 0.1287151
-    ## [3,] 0.06394228 2.604574e-05 151.8091 72.15338 0.03460831 0.2116877 0.1252508
+    ## [1,] 0.06928484 2.593966e-05 136.6439 64.79815 0.03338269 0.1642446 0.1297408
+    ## [2,] 0.06730470 2.593630e-05 144.4769 67.92130 0.03207891 0.1674729 0.1254266
+    ## [3,] 0.06541037 2.595650e-05 151.3791 71.03588 0.03168661 0.1684801 0.1239535
     ##           [,8]        [,9]        [,10]    [,11]    [,12]        [,13]
-    ## [1,] 0.6896168 0.001149286 6.048875e-05 8209.022 6049.560 0.0007493976
-    ## [2,] 0.6838028 0.001152983 6.068329e-05 8394.388 6201.216 0.0007115504
-    ## [3,] 0.6817588 0.001156703 6.087909e-05 8563.071 6324.149 0.0006773838
+    ## [1,] 0.7326569 0.001086301 6.035003e-05 8235.226 6086.024 0.0006917179
+    ## [2,] 0.7319039 0.001089720 6.054002e-05 8423.147 6253.881 0.0006566869
+    ## [3,] 0.7239357 0.001093162 6.073120e-05 8580.117 6369.618 0.0006294780
     ##             [,14]       [,15]       [,16]
-    ## [1,] 0.0009098506 0.004832178 0.006896542
-    ## [2,] 0.0009259963 0.004605009 0.006914269
-    ## [3,] 0.0009951709 0.004375151 0.006989715
+    ## [1,] 0.0006954873 0.004840740 0.008003199
+    ## [2,] 0.0007044030 0.004605866 0.008284908
+    ## [3,] 0.0007692517 0.004417137 0.008148944
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the 16 summary statistics

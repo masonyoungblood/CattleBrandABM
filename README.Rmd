@@ -58,7 +58,6 @@ for(x in 1:length(components)){
 #combine new vectors into a data frame and remove old variable
 all_poss_components <- data.frame(index = index_components, rot = all_poss_components)
 rm(index_components)
-
 ```
 
 Now we can read in and clean up our brand data.
@@ -103,36 +102,54 @@ rm(misspecified)
 
 Before we move any further, we should go ahead and retrieve our geographic data and subset our brands to only include those registered in the state of Kansas.
 
-```{r}
-#get all kansas zip codes and construct all_zips, a data table with zip codes and counties (for now)
-data("zip.regions", package = "choroplethrZip")
-all_zips <- sort(as.numeric(unique(zip.regions[which(zip.regions$state.name == "kansas"),]$region)))
-all_zips <- data.table::data.table(zip = all_zips, county = zip.regions$county.fips.numeric[match(all_zips, zip.regions$region)])
+```{r eval=FALSE}
+#get all kansas zip codes
+data("zip_code_db", package = "zipcodeR")
+zip_code_db <- zip_code_db[which(zip_code_db$state == "KS"), ]
+
+#identify zip codes with missing location data
+missing_locations <- which(is.na(zip_code_db$lat))
+
+#save zip codes with missing locations, to manually fill as CSV file outside of R using Google Maps
+#sink("location_data/missing_zips.txt")
+#cat(zip_code_db$zipcode[missing_locations], sep = "\n")
+#sink()
+
+#add in found locations
+found <- read.csv("location_data/missing_zips_found.txt", header = FALSE)
+zip_code_db$lat[missing_locations] <- found$V2
+zip_code_db$lng[missing_locations] <- found$V3
+
+#construct all_zips, a data table with zip codes, counties, latitudes, and longitudes
+all_zips <- data.table::data.table(zip = as.numeric(zip_code_db$zipcode), county = as.factor(zip_code_db$county), lat = zip_code_db$lat, lon = zip_code_db$lng)
+
+#save
+save(all_zips, file = "location_data/all_zips.RData")
 
 #subset brands to only include those from kansas
 brands <- brands[which(brands$location %in% all_zips$zip), ]
+
+#remove temporary objects
+rm(list = c("zip_code_db", "missing_locations", "found"))
 ```
 
-For our agent-based model (ABM) we will also need the pairwise distances between all of the zip codes in Kansas, so let's go ahead and collect that (and save the object after, because it takes a while).
+For our agent-based model (ABM) we will also need the pairwise geodesic distances between all of the zip codes in Kansas, so let's go ahead and collect that (and save the object after, because it takes a while).
 
 ```{r eval=FALSE}
-#calculate pairwise distances between zip codes
-zip_dists <- proxy::dist(all_zips, method = zipcodeR::zip_distance)
+#calculate pairwise geodesic distances (in kilometers) between zip codes
+zip_dists <- geodist::geodist(all_zips[, 3:4], measure = "geodesic")/1000
 
-#convert to matrix and clean up
-zip_dists <- as.matrix(zip_dists)
-colnames(zip_dists) <- all_zips
-rownames(zip_dists) <- all_zips
-
-#convert from miles to kilometers
-zip_dists <- zip_dists*1.609344
+#add row and column names
+colnames(zip_dists) <- all_zips$zip
+rownames(zip_dists) <- all_zips$zip
 
 #save
-save(zip_dists, file = "zip_dists.RData")
+save(zip_dists, file = "location_data/zip_dists.RData")
 ```
 
 ```{r echo=FALSE}
-load("zip_dists.RData")
+load("location_data/all_zips.RData")
+load("location_data/zip_dists.RData")
 ```
 
 Now we need to turn our brand data into a numeric matrix so it is compatible with our ABM. In this matrix, brands will be stored as a vector of eight numbers, where the first four correspond to the components (with zeroes for empty component codes) and the last four correspond to the angles of rotation (with zeroes for unrotated components). For this, we will just replace each component code with a node denoting it's position in the `components` vector, and assign a zero to empty positions. We will also append zip codes and years.
@@ -202,24 +219,37 @@ When a new brand is created, the components and angles around it are sampled wit
 
 $C$ and $D$ control the strength of copying and distinctiveness in the probability of adopting components and angles, where zero is neutrality, one is proportional to their observed frequencies, and values greater than one increase their influence beyond their observed frequencies.
 
-The map below shows an example of copying and distinctiveness radii (200 km and 100 km, respectively) around a target zip code, highlighted in the darkest blue color. In this example, components and angles within the larger copying radius would be more likely to be appear in the target zip code, whereas brands within the smaller distinctiveness radius would be less likely to be appear. One issue that this map highlights is that a couple of Kansas zip codes appear to be left out of the zip code parsing. This issue is moving to the top of the to-do list!
+The map below shows an example of copying and distinctiveness radii (200 km and 100 km, respectively) around a target zip code, shown by the black triangle. In this example, components and angles within the larger copying radius (blue) would be more likely to be appear in the target zip code, whereas brands within the smaller distinctiveness radius (red) would be less likely to be appear. Here we plot the geographic centroids of each zip code rather than their boundaries, as the only shapefiles available at the zip code level are for the US Census' "zip code tabulation areas", which do not include all locations in the dataset.
 
 ```{r echo=FALSE, fig.align="center"}
 #get zip codes within 200 km and 100 km of target location
 copy_example <- names(which(zip_dists[, which(colnames(zip_dists) == 67427)] <= 200))
 dist_example <- names(which(zip_dists[, which(colnames(zip_dists) == 67427)] <= 100))
 
-#combined into data frame compatible with choroplethrZip
-map_example <- data.frame(region = as.character(all_zips$zip), value = rep(0, length(all_zips$zip)))
-map_example$value[which(map_example$region %in% copy_example)] <- 1
-map_example$value[which(map_example$region %in% dist_example)] <- 2
-map_example$value[which(map_example$region == 67427)] <- 4
+kansas_map <- ggplot2::map_data("state", "kansas")
+map_example <- data.frame(zip = all_zips$zip, lon = all_zips$lon, lat = all_zips$lat,
+                          color = rep(0, length(all_zips$zip)),
+                          shape = rep(0, length(all_zips$zip)))
+map_example$color[which(map_example$zip %in% copy_example)] <- 1
+map_example$color[which(map_example$zip %in% dist_example)] <- 2
+map_example$color[which(map_example$zip == 67427)] <- 3
+map_example$shape[which(map_example$zip == 67427)] <- 1
+map_example$color <- as.factor(map_example$color)
+map_example$shape <- as.factor(map_example$shape)
 
-#map
-choroplethrZip::zip_choropleth(map_example, state_zoom = "kansas", num_colors = 1)
+ggplot2::ggplot(kansas_map, ggplot2::aes(x = long, y = lat)) +
+  ggplot2::geom_point(map_example, mapping = ggplot2::aes(x = lon, y = lat, colour = color, shape = shape, size = shape)) + 
+  ggplot2::geom_polygon(fill = "transparent", colour = "black") + 
+  ggplot2::scale_colour_manual(values = c("grey90", scales::hue_pal()(3)[3], scales::hue_pal()(3)[1], scales::hue_pal()(3)[2])) +
+  ggplot2::scale_shape_manual(values = c(16, 17)) +
+  ggplot2::scale_size_manual(values = c(2, 8)) +
+  ggplot2::coord_quickmap() + 
+  ggplot2::theme_minimal() + 
+  ggplot2::labs(x = "Longitude", y = "Latitude") + 
+  ggplot2::theme(legend.position = "none")
 
 #remove objects
-rm(list = c("copy_example", "dist_example", "map_example"))
+rm(list = c("copy_example", "dist_example", "kansas_map", "map_example"))
 ```
 
 To simulate simplicity and complexity, the number of components in each new brand is drawn from a Poisson distribution where $\lambda$ is the parameter of interest (henceforth complexity). Below is an example of the normalized probabilities of creating a brand with between one and four components when $\lambda$ is 0.5, 3, and 15. Note that the normalization here is only for plotting purposes - We will using the raw output of `dpois` as the `prob` argument of base R's `sample` function.
