@@ -378,4 +378,4 @@ Sys.time() - start
 components_angles
 ```
 
-The output of each model is a matrix with a row for each of the three sampling years, and a column for each of the 16 summary statistics collected in that year. Right now the runtime of both models (especially the angle) is far too high for generative inference, so we will have to do quite a bit of profiling and optimization to get it down.
+The output of each model is a matrix with a row for each of the three sampling years, and a column for each of the 16 summary statistics collected in that year. After some profiling and optimization (using `profvis`) the runtime for the agent-based model is just barely fast enough for generative inference. I tried to further optimize the way that unique brands and component/angle combinations are handled by leaving them as matrices of integers instead of converting them into concatenated strings, but surprisingly the string method is significantly faster.

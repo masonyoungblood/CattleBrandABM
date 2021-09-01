@@ -1,21 +1,38 @@
+#NOTES
+#one peculiar part of this code is that, when data is integer (so for the 
+  #components) instead of doing table(factor(levels)) to account for all entries
+  #and make sure everything lines up we are using
+  #table(c(all, actual))[subtraction and trimming] because it is faster
+#we are also storing unique(stuff) as a separate variable each time because
+  #it ends up being faster
+
+#faster version of %in%: https://stackoverflow.com/questions/32934933/faster-in-operator
+`%fin%` <- function(x, table){
+  fastmatch::fmatch(x, table, nomatch = 0) > 0
+}
+
 #brand generator, which is called within the cattle brand ABM
 brand_generator <- function(brands, components, zip, zip_dists, rot_prob, complexity, copy_radius, copy_strength, dist_radius, dist_strength, angles = FALSE){
+  #get rows with zips that are within the copy and dist radii
+  copy_rows <- which(brands[, 9] %fin% as.numeric(names(which(zip_dists[, which(colnames(zip_dists) == zip)] <= copy_radius))))
+  dist_rows <- which(brands[, 9] %fin% as.numeric(names(which(zip_dists[, which(colnames(zip_dists) == zip)] <= dist_radius))))
+  
   #generate frequencies of components within the copy radius, where missing components are assigned 0
-  copy_components <- as.numeric(table(factor(c(brands[which(brands[, 9] %in% names(which(zip_dists[, which(colnames(zip_dists) == zip)] <= copy_radius))), 1:4]), levels = 1:nrow(components))))
+  copy_components <- (as.numeric(Rfast::Table(c(0:nrow(components), brands[copy_rows, 1:4])))-1)[-1]
   
   #generate frequencies of components within the dist radius, where missing components are assigned 0
-  dist_components <- as.numeric(table(factor(c(brands[which(brands[, 9] %in% names(which(zip_dists[, which(colnames(zip_dists) == zip)] <= dist_radius))), 1:4]), levels = 1:nrow(components))))
+  dist_components <- (as.numeric(Rfast::Table(c(0:nrow(components), brands[dist_rows, 1:4])))-1)[-1]
   
   #sample up to four components, weighted by the copy and dist probability function, where the number of components is drawn from a poisson distribution with a lambda equal to "complexity"
   sim_brand <- sample(1:nrow(components), sample(1:4, 1, prob = dpois(c(1, 2, 3, 4), complexity)), replace = TRUE, prob = ((copy_components+1)^copy_strength)*((1/(dist_components+1))^dist_strength))
 
   #if angles are to be considered
   if(angles){
-    #generate frequencies of components within the copy radius, where missing components are assigned 0
-    copy_angles <- as.numeric(table(factor(c(brands[which(brands[, 9] %in% names(which(zip_dists[, which(colnames(zip_dists) == zip)] <= copy_radius))), 5:8]), levels = 1:9)))
+    #generate frequencies of angles within the copy radius, where missing angles are assigned 0
+    copy_angles <- (as.numeric(Rfast::Table(c(0:9, brands[copy_rows, 5:8])))-1)[-1]
     
-    #generate frequencies of components within the copy radius, where missing components are assigned 0
-    dist_angles <- as.numeric(table(factor(c(brands[which(brands[, 9] %in% names(which(zip_dists[, which(colnames(zip_dists) == zip)] <= dist_radius))), 5:8]), levels = 1:9)))
+    #generate frequencies of angles within the copy radius, where missing angles are assigned 0
+    dist_angles <- (as.numeric(Rfast::Table(c(0:9, brands[dist_rows, 5:8])))-1)[-1]
     
     #generate empty vector to fill with angles
     sim_angles <- rep(0, 4)
@@ -61,140 +78,152 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
     running_brands <- running_brands[-sample(1:nrow(running_brands), n_old), ]
     
     #if it is a sampling year then calculate frequency distributions and summary statistics
-    if(i %in% c(sampling_years - init_year)){
+    if(i %fin% c(sampling_years - init_year)){
       #if angles are not considered, then generate component frequencies without them (and generate brand frequencies with respective columns selected)
       if(!angles){
         #get component frequencies
-        comp_freqs <- as.numeric(sort(table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), decreasing = TRUE))
+        comp_freqs <- as.numeric(sort(Rfast::Table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), decreasing = TRUE))
         
         #get brand frequencies (for now just combining them as a string)
         all_brands <- sapply(1:nrow(running_brands), function(x){paste(running_brands[x, 1:4], collapse = " ")})
-        brand_freqs <- as.numeric(sort(table(all_brands), decreasing = TRUE))
+        unique_brands <- unique(all_brands)
+        brand_freqs <- as.numeric(sort(Rfast::Table(all_brands), decreasing = TRUE))
         
         #construct components by zip codes matrix
         comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
-          as.numeric(table(factor(c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4]), levels = 1:nrow(components))))
+          (as.numeric(Rfast::Table(c(0:nrow(components), running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4])))-1)[-1]
         }))
-        if(length(which(colSums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[, -which(colSums(comp_beta_zip_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(comp_beta_zip_mat) == 0)) > 0){
+          comp_beta_zip_mat <- comp_beta_zip_mat[, -which(Rfast::colsums(comp_beta_zip_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[-which(rowSums(comp_beta_zip_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(comp_beta_zip_mat) == 0)) > 0){
+          comp_beta_zip_mat <- comp_beta_zip_mat[-which(Rfast::rowsums(comp_beta_zip_mat) == 0), ] #remove empty rows
         }
         
+        #get unique counties to save processing time
+        unique_counties <- unique(all_zips$county)
+        
         #construct components by counties matrix
-        comp_beta_county_mat <- t(sapply(1:length(unique(all_zips$county)), function(x){
-          as.numeric(table(factor(c(running_brands[which(running_brands[, 9] %in% all_zips$zip[which(all_zips$county == unique(all_zips$county)[x])]), 1:4]), levels = 1:nrow(components))))
+        comp_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
+          (as.numeric(Rfast::Table(c(0:nrow(components), running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4])))-1)[-1]
         }))
-        if(length(which(colSums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[, -which(colSums(comp_beta_county_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(comp_beta_county_mat) == 0)) > 0){
+          comp_beta_county_mat <- comp_beta_county_mat[, -which(Rfast::colsums(comp_beta_county_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[-which(rowSums(comp_beta_county_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(comp_beta_county_mat) == 0)) > 0){
+          comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
         }
         
         #construct brands by zip codes matrix
         brand_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
           temp <- matrix(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4], ncol = 4) #construct temp matrix of brands in the corresponding zip code
           if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique(all_brands)))) #return frequency vector
+            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
           } else{ #if not
-            rep(0, length(unique(all_brands))) #return same number of zeros
+            rep(0, length(unique_brands)) #return same number of zeros
           }
         }))
-        if(length(which(colSums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[, -which(colSums(brand_beta_zip_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(brand_beta_zip_mat) == 0)) > 0){
+          brand_beta_zip_mat <- brand_beta_zip_mat[, -which(Rfast::colsums(brand_beta_zip_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[-which(rowSums(brand_beta_zip_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(brand_beta_zip_mat) == 0)) > 0){
+          brand_beta_zip_mat <- brand_beta_zip_mat[-which(Rfast::rowsums(brand_beta_zip_mat) == 0), ] #remove empty rows
         }
         
         #construct brands by counties matrix
-        brand_beta_county_mat <- t(sapply(1:length(unique(all_zips$county)), function(x){
-          temp <- matrix(running_brands[which(running_brands[, 9] %in% all_zips$zip[which(all_zips$county == unique(all_zips$county)[x])]), 1:4], ncol = 4) #construct temp matrix of brands in the corresponding county
+        brand_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
+          temp <- matrix(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4], ncol = 4) #construct temp matrix of brands in the corresponding county
           if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique(all_brands)))) #return frequency vector
+            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
           } else{ #if not
-            rep(0, length(unique(all_brands))) #return same number of zeros
+            rep(0, length(unique_brands)) #return same number of zeros
           }
         }))
-        if(length(which(colSums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[, -which(colSums(brand_beta_county_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(brand_beta_county_mat) == 0)) > 0){
+          brand_beta_county_mat <- brand_beta_county_mat[, -which(Rfast::colsums(brand_beta_county_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[-which(rowSums(brand_beta_county_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(brand_beta_county_mat) == 0)) > 0){
+          brand_beta_county_mat <- brand_beta_county_mat[-which(Rfast::rowsums(brand_beta_county_mat) == 0), ] #remove empty rows
         }
+        
+        #remove temporary variables
+        rm(list = c("all_brands", "unique_brands", "unique_counties"))
       }
       
       #if angles are considered, then generate component frequencies with them
       if(angles){
         #extract combinations of components and angles (for now just combining them as a string and remove "0 0")
         comp_angle_combos <- c(sapply(1:nrow(running_brands), function(x){paste(c(running_brands[x, 1:4]), c(running_brands[x, 5:8]))}))
+        unique_comp_angle_combos <- unique(comp_angle_combos) #run this before the next line, because "0 0" needs to be accounted for later
         comp_angle_combos <- comp_angle_combos[-which(comp_angle_combos == "0 0")]
         
         #get component frequencies (where rotated components are treated as unique)
-        comp_freqs <- as.numeric(sort(table(comp_angle_combos), decreasing = TRUE))
+        comp_freqs <- as.numeric(sort(Rfast::Table(comp_angle_combos), decreasing = TRUE))
         
         #get brand frequencies (for now just combining them as a string)
         all_brands <- sapply(1:nrow(running_brands), function(x){paste(running_brands[x, 1:8], collapse = " ")})
-        brand_freqs <- as.numeric(sort(table(all_brands), decreasing = TRUE))
+        unique_brands <- unique(all_brands)
+        brand_freqs <- as.numeric(sort(Rfast::Table(all_brands), decreasing = TRUE))
         
         #construct components by zip codes matrix
         comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
-          as.numeric(table(factor(paste(c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4]), c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 5:8])), levels = unique(comp_angle_combos))))
+          (as.numeric(Rfast::Table(c(unique_comp_angle_combos, paste(c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4]), c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 5:8])))))-1)[-1]
         }))
-        if(length(which(colSums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[, -which(colSums(comp_beta_zip_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(comp_beta_zip_mat) == 0)) > 0){
+          comp_beta_zip_mat <- comp_beta_zip_mat[, -which(Rfast::colsums(comp_beta_zip_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[-which(rowSums(comp_beta_zip_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(comp_beta_zip_mat) == 0)) > 0){
+          comp_beta_zip_mat <- comp_beta_zip_mat[-which(Rfast::rowsums(comp_beta_zip_mat) == 0), ] #remove empty rows
         }
         
+        #get unique counties to save processing time
+        unique_counties <- unique(all_zips$county)
+        
         #construct components by counties matrix
-        comp_beta_county_mat <- t(sapply(1:length(unique(all_zips$county)), function(x){
-          as.numeric(table(factor(paste(c(running_brands[which(running_brands[, 9] %in% all_zips$zip[which(all_zips$county == unique(all_zips$county)[x])]), 1:4]), c(running_brands[which(running_brands[, 9] %in% all_zips$zip[which(all_zips$county == unique(all_zips$county)[x])]), 5:8])), levels = unique(comp_angle_combos))))
+        comp_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
+          (as.numeric(Rfast::Table(c(unique_comp_angle_combos, paste(c(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4]), c(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 5:8])))))-1)[-1]
         }))
-        if(length(which(colSums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[, -which(colSums(comp_beta_county_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(comp_beta_county_mat) == 0)) > 0){
+          comp_beta_county_mat <- comp_beta_county_mat[, -which(Rfast::colsums(comp_beta_county_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[-which(rowSums(comp_beta_county_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(comp_beta_county_mat) == 0)) > 0){
+          comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
         }
         
         #construct brands by zip codes matrix
         brand_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
           temp <- matrix(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:8], ncol = 8) #construct temp matrix of brands in the corresponding zip code
           if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique(all_brands)))) #return frequency vector
+            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
           } else{ #if not
-            rep(0, length(unique(all_brands))) #return same number of zeros
+            rep(0, length(unique_brands)) #return same number of zeros
           }
         }))
-        if(length(which(colSums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[, -which(colSums(brand_beta_zip_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(brand_beta_zip_mat) == 0)) > 0){
+          brand_beta_zip_mat <- brand_beta_zip_mat[, -which(Rfast::colsums(brand_beta_zip_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[-which(rowSums(brand_beta_zip_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(brand_beta_zip_mat) == 0)) > 0){
+          brand_beta_zip_mat <- brand_beta_zip_mat[-which(Rfast::rowsums(brand_beta_zip_mat) == 0), ] #remove empty rows
         }
         
         #construct brands by counties matrix
-        brand_beta_county_mat <- t(sapply(1:length(unique(all_zips$county)), function(x){
-          temp <- matrix(running_brands[which(running_brands[, 9] %in% all_zips$zip[which(all_zips$county == unique(all_zips$county)[x])]), 1:8], ncol = 8) #construct temp matrix of brands in the corresponding county
+        brand_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
+          temp <- matrix(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:8], ncol = 8) #construct temp matrix of brands in the corresponding county
           if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique(all_brands)))) #return frequency vector
+            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
           } else{ #if not
-            rep(0, length(unique(all_brands))) #return same number of zeros
+            rep(0, length(unique_brands)) #return same number of zeros
           }
         }))
-        if(length(which(colSums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[, -which(colSums(brand_beta_county_mat) == 0)] #remove empty columns
+        if(length(which(Rfast::colsums(brand_beta_county_mat) == 0)) > 0){
+          brand_beta_county_mat <- brand_beta_county_mat[, -which(Rfast::colsums(brand_beta_county_mat) == 0)] #remove empty columns
         }
-        if(length(which(rowSums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[-which(rowSums(brand_beta_county_mat) == 0), ] #remove empty rows
+        if(length(which(Rfast::rowsums(brand_beta_county_mat) == 0)) > 0){
+          brand_beta_county_mat <- brand_beta_county_mat[-which(Rfast::rowsums(brand_beta_county_mat) == 0), ] #remove empty rows
         }
         
         #remove temporary variables
-        rm(list = c("comp_angle_combos", "all_brands"))
+        rm(list = c("comp_angle_combos", "unique_comp_angle_combos", "all_brands", "unique_brands", "unique_counties"))
       }
       
       #calculate component summary statistics
