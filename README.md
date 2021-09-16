@@ -10,61 +10,7 @@ GitHub](https://github.com/masonyoungblood/cattle_brand_data).
 
 ## Load and prepare brands data
 
-Before we load our own data, we need to store the brand components.
-These include the components listed in the brand book indices, as well
-as some additions that appear in the real data (i.e. “1,,” and “TX,”).
-The “UN,” component was excluded as it corresponds to unidentifiable
-symbols.
-
-``` r
-components <- c("#,,", "$,,", "%,,", "(,,", "),,", "*,,", "+,,", "-,,", "-3,",
-                "/,,", "1,,", "2,,", "3,,", "4,,", "5,,", "6,,", "7,,", "8,,",
-                "9,,", "=,,", "?,,", "A,,", "A1,", "A2,", "A3,", "AH,", "AN,",
-                "AP,", "AR,", "AR1", "AR2", "AR3", "AR5", "AR7", "B,,", "BA,",
-                "BB,", "BB1", "BB2", "BB3", "BB4", "BB5", "BB6", "BB7", "BE,",
-                "BF,", "BI,", "BO,", "BT,", "BU,", "BX,", "BX1", "BX2", "C,,",
-                "CA,", "CC,", "CM,", "CO,", "CP,", "CR,", "D,,", "DI,", "E,,",
-                "F,,", "F1,", "FB,", "FH,", "FI,", "FL,", "FO,", "G,,", "G2,",
-                "G1,", "GU,", "H,,", "H1,", "HA,", "HC,", "HK,", "HR,", "HT,",
-                "I,,", "IN,", "J,,", "JA,", "JU,", "JW,", "K,,", "K1,", "KE,",
-                "KS,", "L,,", "L1,", "LA,", "LI,", "M,,", "M1,", "MA,", "MI,",
-                "MI1", "MI2", "MI3", "MO,", "MU,", "N,,", "N1,", "NT,", "O,,",
-                "O1,", "OY,", "P,,", "PI,", "PR,", "Q,,", "QC,", "QC1", "R,,",
-                "R1,", "R2,", "RE,", "S,,", "SA,", "SC,", "SD,", "SH,", "SN,",
-                "SP,", "SU,", "SK,", "SR,", "SW,", "T,,", "T1,", "TA,", "TK,",
-                "TK1", "TK2", "TP,", "TR,", "TR1", "TR2", "TR3", "TU,", "TX,",
-                "U,,", "UM,", "V,,", "W,,", "W1,", "WA,", "X,,", "Y,,", "Y1,",
-                "Z,,", "[,,", "\\,,", "],,", "^,,", "~,,", "~1,", "~2,", "~3,",
-                "~4,", "~5,", "~6,")
-```
-
-We also need to generate all possible components, accounting for
-rotation, alongside index components in a data frame so rotated versions
-can be easily converted to non-rotated versions later on.
-
-``` r
-#create empty vectors to fill
-all_poss_components <- c()
-index_components <- c()
-
-#iterate through components
-for(x in 1:length(components)){
-  #if a component is rotatable
-  if(nchar(gsub(",", "", components[x])) < 3){
-    #add rotated versions to all_poss_components
-    all_poss_components <- c(all_poss_components, components[x], paste0(substr(components[x], 1, 2), as.character(1:9)))
-    
-    #repeat the original component the same number of times
-    index_components <- c(index_components, components[x], rep(components[x], length(paste0(substr(components[x], 1, 2), as.character(1:9)))))
-  }
-}
-
-#combine new vectors into a data frame and remove old variable
-all_poss_components <- data.frame(index = index_components, rot = all_poss_components)
-rm(index_components)
-```
-
-Now we can read in and clean up our brand data.
+First let’s read in and clean up our brand data.
 
 ``` r
 #read in brand data
@@ -98,9 +44,7 @@ animal. Note that the extra commas at the end of each brand component
 are just part of the data frame output. Some brands have a single digit
 in the 12th digit before the location digit to separate duplicates,
 where the same components are arranged in different ways. Let’s extract
-those and put them into the sixth position of the brand vectors, and
-then remove any misspecified brands with components that don’t appear in
-`all_poss_components`.
+those and put them into the sixth position of the brand vectors.
 
 ``` r
 #move duplicate code (12th position) into the sixth position of the brand vectors
@@ -118,8 +62,251 @@ for(x in 1:nrow(brands)){
   }
 }
 
-#remove all misspecified brands (with components that don't appear in all possible components)
-misspecified <- which(sapply(1:nrow(brands), function(x){length(which(brands$brand[[x]][1:4] %in% c(all_poss_components$rot, ",,,")))}) != 4)
+#save
+save(brands, file = "raw_brands.RData")
+```
+
+Before we move any further we should determine whether letters in
+components tend to be initials or whether they should be treated as
+distinct. Here are the frequencies of letters in the brands.
+
+<img src="README_files/figure-gfm/unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
+
+If we compare this with the distribution of first letters of surnames
+that appeared more than 100 times in the 2010 US Census we can see that
+the distributions are drastically different.
+
+<img src="README_files/figure-gfm/unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
+
+``` r
+#load in the checked brands with letters and get the proportion correct
+prop_correct <- mean(read.csv("letters_checked.csv")$initials)*100
+```
+
+Weighting the US surname distribution so that it matches the racial
+composition of Kansas does not solve the issue, so we manually checked
+200 random brands with letters in the 2016 brand book. In 78% of the
+random brands at least one of the letters corresponded to one or both of
+the first or last names of the owners or the ranch (with some letters
+modifying others, like A and L both appearing in a brand where the L is
+a “leg” on the right side of the A in a brand owned by the family
+Asmussen, and some characters combined to make a letter, like L and 7
+combined into an S for Schneider).
+
+Since a significant number of letters in brands are not initials, some
+letters (e.g. I and O) are also used to code shapes, and different
+letters have different possible rotation angles, we chose to keep them
+as separate categories. Numbers were also included as separate
+categories. Some of the symbols in the brand book have variants that are
+distinguished using the third digit that is usually used for rotation
+(e.g. AR, BB, MI, TK, and TR). We collapsed each set of these symbols
+into single categories that can be rotated just like any other
+component.
+
+We made some further adjustments to Kansas’ coding scheme by removing
+redundant components and restricting the possible angles of rotations
+for different symbols. All of these adjustments are stored in
+`components.xlsx`: the `collapse` sheet has which components should be
+converted to what along with their new angles, and the `rotation` sheet
+has which components can be rotated in which directions. The `rotation`
+sheet also has a column for each angle (1 to 9), where the value for
+each component is whether that angle is correct if it appears (NA),
+needs to be corrected to no rotation (0), or needs to be corrected to a
+different rotation (1 to 9).
+
+All letter variations were converted to single categories. For example,
+A1 and A2, two stylistic variations of A with square and rounded tops,
+were both converted to A. The letter I is used primarily for vertical
+lines, so the other single line symbols (i.e. /, , and -) were converted
+to I (with their associated angles). 1, which could be easily mistaken
+for I, does not appear in the coding scheme. Double and triple lines are
+stored as separate symbols (i.e. = and -3). We chose to keep these as
+separate categories rather than convert them to multiple repetitions of
+I, as reducing components to their constituent parts introduces many
+other issues and could inflate the measured complexity (or number of
+components) of some brands.
+
+), QC, and QC1 were all converted to ( (with their associated angles).
+\], BX1, and BX2 were all converted to \[ (with their associated
+angles). DI (diamond) was converted to BX (box) with the associated
+angle. All of the \~ components (i.e. \~1 through \~6), which correspond
+to pairs of “squiggles” or “wings” that modify other components, do not
+seem to have systematic differences or angles and were combined into a
+single category without rotation.
+
+MU, an unused code for music notes, was converted to NT, a code for
+notation that appears in the brand books. ^ was converted to A3, a code
+used for the same symbol in the brand books.
+
+Several other simplifications were considered (with angles), such as
+converting + to X, 9 to 6, W to M, etc. For now we chose to keep these
+components separate.
+
+``` r
+#load in adjustments from components.xlsx
+collapse <- data.table::as.data.table(readxl::read_excel(paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/", "components.xlsx"), sheet = "collapse"))
+rotation <- data.table::as.data.table(readxl::read_excel(paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/", "components.xlsx"), sheet = "rotation"))
+
+#reformat rotation
+rotation$rot <- strsplit(rotation$rot, ", ")
+```
+
+``` r
+#for each brand
+for(i in 1:nrow(brands)){
+  #check if there are characters that need replacing (either three digit characters like BX1 and QC1 or substringed characters without commas)
+  temp <- which(brands$brand[[i]][1:4] %in% collapse$from | gsub(",", "", substr(brands$brand[[i]][1:4], 1, 2)) %in% collapse$from)
+  
+  #and if there are
+  if(length(temp) > 0){
+    #go through them
+    for(j in 1:length(temp)){
+      #if the full three-digit component is in the data table (so something like BX1, QC1, etc.)
+      if(brands$brand[[i]][temp[j]] %in% collapse$from){
+        #store the index of the component
+        temp_2 <- which(collapse$from == brands$brand[[i]][temp[j]])
+        
+        #and either replace it without or with rotation
+        if(collapse$rot[temp_2] == "NA"){
+          brands$brand[[i]][temp[j]] <- stringr::str_pad(collapse$to[temp_2], width = 3, side = "right", pad = ",")
+        } else{
+          brands$brand[[i]][temp[j]] <- paste0(stringr::str_pad(collapse$to[temp_2], width = 2, side = "right", pad = ","), collapse$rot[temp_2])
+        }
+      } else{ #if it's less than three digits
+        #store the index of the component
+        temp_2 <- which(collapse$from == gsub(",", "", substr(brands$brand[[i]][temp[j]], 1, 2)))
+        
+        #and either replace it without or with rotation
+        if(collapse$rot[temp_2] == "NA"){
+          brands$brand[[i]][temp[j]] <- stringr::str_pad(collapse$to[temp_2], width = 3, side = "right", pad = ",")
+        } else{
+          brands$brand[[i]][temp[j]] <- paste0(stringr::str_pad(collapse$to[temp_2], width = 2, side = "right", pad = ","), collapse$rot[temp_2])
+        }
+      }
+      
+      rm(temp_2)
+    }
+  }
+  
+  rm(temp)
+}
+```
+
+To determine which angles are possible for each symbol we went through
+and assigned each one a five-digit binary code, where each digit
+corresponds to whether (0 or 1) each symbol matches itself when flipped
+horizontally, flipped vertically, rotated 90 degrees, rotated 180
+degrees, and rotated 45 degrees. Then, for each five-digit code, we
+determined which rotation angles were possible. Some extra rotation
+angles were manually removed for character pairs like + and X, 9 and 6,
+and W and M, and some rotations angles had to be corrected when the
+binary code didn’t quite capture the symbol, such as for %.
+
+Now let’s run through and correct any rotated components where the angle
+does not match the vector of first unique rotation angles for that
+component.
+
+``` r
+#for each brand
+for(i in 1:nrow(brands)){
+  #check if there are rotated components
+  temp <- which(substr(brands$brand[[i]][1:4], 3, 3) %in% c(1:9))
+  
+  #if there are
+  if(length(temp) > 0){
+    #go through them
+    for(j in 1:length(temp)){
+      #store the index of the component
+      temp_2 <- which(rotation$component == gsub(",", "", substr(brands$brand[[i]][temp[j]], 1, 2)))
+      
+      #store the current angle of rotation
+      angle <- substr(brands$brand[[i]][temp[j]], 3, 3)
+      
+      #if the rotated component matches a real component (checking since we haven't removed misspecified components yet)
+      if(length(temp_2) > 0){
+        #and the rotation angle is not in the first unique rotation angles for that component
+        if(!(angle %in% rotation$rot[[temp_2]])){
+          #and the new rotation is not zero
+          if(as.numeric(rotation[temp_2, ..angle]) > 0){
+            #replace the current rotated component with a corrected version
+            brands$brand[[i]][temp[j]] <- paste0(substr(brands$brand[[i]][temp[j]], 1, 2), as.numeric(rotation[temp_2, ..angle]))
+          } else{ #if the new rotation is zero
+            #remove the rotation entirely
+            brands$brand[[i]][temp[j]] <- paste0(substr(brands$brand[[i]][temp[j]], 1, 2), ",")
+          }
+          
+        }
+      }
+      
+      rm(list = c("temp_2", "angle"))
+    }
+  }
+  
+  rm(temp)
+}
+```
+
+Now we need to store the brand components. These include the components
+listed in the brand book indices, as well as some additions that appear
+in the real data (i.e. “TX,”). The “UN,” component was excluded as it
+corresponds to unidentifiable symbols.
+
+``` r
+#store components with commas
+components <- stringr::str_pad(rotation$component, width = 3, side = "right", pad = ",")
+
+#print them
+components
+```
+
+    ##   [1] "A,," "B,," "C,," "D,," "E,," "F,," "G,," "H,," "I,," "J,," "K,," "L,,"
+    ##  [13] "M,," "N,," "O,," "P,," "Q,," "R,," "S,," "T,," "U,," "V,," "W,," "X,,"
+    ##  [25] "Y,," "Z,," "#,," "$,," "%,," "(,," "[,," "*,," "?,," "+,," "=,," "-3,"
+    ##  [37] "~,," "2,," "3,," "4,," "5,," "6,," "7,," "8,," "9,," "A3," "AH," "AN,"
+    ##  [49] "AP," "AR," "BA," "BB," "BE," "BF," "BI," "BO," "BT," "BU," "BX," "CA,"
+    ##  [61] "CC," "CM," "CO," "CP," "CR," "FB," "FH," "FI," "FL," "FO," "GU," "HA,"
+    ##  [73] "HC," "HK," "HR," "HT," "IN," "KS," "LA," "LI," "MA," "MI," "MO," "NT,"
+    ##  [85] "O1," "OY," "PI," "PR," "RE," "SA," "SC," "SD," "SH," "SN," "SP," "SU,"
+    ##  [97] "SK," "SR," "T1," "TA," "TK," "TP," "TR," "TU," "TX," "UM," "WA,"
+
+We also need to generate all possible components, accounting for
+rotation, alongside index components in a data frame so rotated versions
+can be easily converted to non-rotated versions later on. Since we have
+already corrected incorrect angles we will only allow for angles that
+appear in the vector of first unique rotation angles for that component.
+
+``` r
+#create empty vectors to fill
+all_poss_components <- c()
+index_components <- c()
+
+#iterate through components
+for(x in 1:length(components)){
+  #if the component is not rotatable
+  if(length(which(rotation$rot[[x]] == "NA")) > 0){
+    #add it without rotation
+    all_poss_components <- c(all_poss_components, components[x])
+    index_components <- c(index_components, components[x])
+  } else{
+    #add it with rotation
+    all_poss_components <- c(all_poss_components, components[x], paste0(substr(components[x], 1, 2), rotation$rot[[x]]))
+    index_components <- c(index_components, components[x], rep(components[x], length(paste0(substr(components[x], 1, 2), rotation$rot[[x]]))))
+  }
+}
+
+#combine new vectors into a data frame and remove old variable
+all_poss_components <- data.frame(index = index_components, rot = all_poss_components)
+rm(index_components)
+```
+
+Now let’s remove any misspecified brands with components that don’t
+appear in `all_poss_components`.
+
+``` r
+#remove all misspecified brands (with components that aren't letters or don't appear in all possible components)
+misspecified <- which(sapply(1:nrow(brands), function(x){
+  length(which(brands$brand[[x]][1:4] %in% c(all_poss_components$rot, ",,,")))
+}) != 4)
 brands <- brands[-misspecified,]
 rm(misspecified)
 ```
@@ -175,6 +362,36 @@ rownames(zip_dists) <- all_zips$zip
 save(zip_dists, file = "location_data/zip_dists.RData")
 ```
 
+Now we need to remove brands that are duplicated within the same zip
+code. When this occurs it’s usually one family or ranch that has
+registered a single brand multiple times for different locations on the
+animal.
+
+``` r
+#get concatenated brands with duplicate codes
+concat_brands <- sapply(1:nrow(brands), function(x){
+  #get four components and the duplicate code
+  temp <- brands$brand[[x]][c(1:4, 6)]
+  
+  #if duplicate code is missing them remove the NA
+  if(length(which(is.na(temp))) > 0){
+    temp <- temp[-which(is.na(temp))]
+  }
+  
+  #return a concatenated version
+  paste0(temp, collapse = "")
+})
+
+#build data frame to determine which rows are duplicated (accounting for zip code and year)
+concat_brands <- data.frame(brand = concat_brands, location = brands$location, year = brands$year)
+
+#remove duplicated rows from the main data table
+brands <- brands[-which(duplicated(concat_brands))]
+
+#remove temporary object
+rm(concat_brands)
+```
+
 Now we need to turn our brand data into a numeric matrix so it is
 compatible with our ABM. In this matrix, brands will be stored as a
 vector of eight numbers, where the first four correspond to the
@@ -182,7 +399,8 @@ components (with zeroes for empty component codes) and the last four
 correspond to the angles of rotation (with zeroes for unrotated
 components). For this, we will just replace each component code with a
 node denoting it’s position in the `components` vector, and assign a
-zero to empty positions. We will also append zip codes and years.
+zero to empty positions. We will also append zip codes and years. All
+letters will be collapsed into a single component.
 
 Once brands are converted let’s go ahead and save the object so we don’t
 have to execute all of this code every time.
@@ -203,13 +421,15 @@ for(i in 1:nrow(brands)){
   
   #create empty vector of angles
   angle_nums <- rep(0, 4)
+  
   #iterate through the components
   for(j in 1:length(brand_nums[!is.na(brand_nums)])){
+    #if the component is not a letter
     #check if there are any characters that are different between the actual component and it's index (indicates rotation)
     temp <- as.numeric(setdiff(strsplit(all_poss_components$rot[match(brands$brand[[i]][j], all_poss_components$rot)], split = "")[[1]],
                                strsplit(all_poss_components$index[match(brands$brand[[i]][j], all_poss_components$rot)], split = "")[[1]]))
     
-    #if there are, replace the correspond 0 in the vector of angles
+    #if there are, replace the corresponding 0 in the vector of angles
     if(length(temp) > 0){angle_nums[j] <- temp}
   }
   
@@ -236,16 +456,16 @@ brands[1:10,]
 ```
 
     ##       [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]  [,9] [,10]
-    ##  [1,]    1    0    0    0    0    0    0    0 67563  2008
-    ##  [2,]    1    0    0    0    0    0    0    0 67835  2008
-    ##  [3,]    1    0    0    0    0    0    0    0 67880  2008
-    ##  [4,]    2    0    0    0    0    0    0    0 67104  2008
-    ##  [5,]    2    0    0    0    0    0    0    0 66428  2008
-    ##  [6,]    2    0    0    0    0    0    0    0 67869  2008
-    ##  [7,]    2    0    0    0    0    0    0    0 67664  2008
-    ##  [8,]    2    8    0    0    0    0    0    0 67530  2008
-    ##  [9,]    2    0    0    0    2    0    0    0 67659  2008
-    ## [10,]    3    0    0    0    0    0    0    0 67529  2008
+    ##  [1,]   27    0    0    0    0    0    0    0 67563  2008
+    ##  [2,]   27    0    0    0    0    0    0    0 67835  2008
+    ##  [3,]   27    0    0    0    0    0    0    0 67880  2008
+    ##  [4,]   28    0    0    0    0    0    0    0 67104  2008
+    ##  [5,]   28    0    0    0    0    0    0    0 66428  2008
+    ##  [6,]   28    0    0    0    0    0    0    0 67869  2008
+    ##  [7,]   28    0    0    0    0    0    0    0 67664  2008
+    ##  [8,]   28    9    0    0    0    5    0    0 67530  2008
+    ##  [9,]   28    0    0    0    1    0    0    0 67659  2008
+    ## [10,]   29    0    0    0    0    0    0    0 67529  2008
 
 ## Description of the ABM
 
@@ -278,6 +498,9 @@ radius, raised to an exponent *D*.
 probability of adopting components and angles, where zero is neutrality,
 one is proportional to their observed frequencies, and values greater
 than one increase their influence beyond their observed frequencies.
+When only a subset of angles are possible for a particular component,
+then only the frequencies of those particular angles in the population
+are considered.
 
 The map below shows an example of copying and distinctiveness radii (200
 km and 100 km, respectively) around a target zip code, shown by the
@@ -289,7 +512,7 @@ of each zip code rather than their boundaries, as the only shapefiles
 available at the zip code level are for the US Census’ “zip code
 tabulation areas”, which do not include all locations in the dataset.
 
-<img src="README_files/figure-gfm/unnamed-chunk-12-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-22-1.png" style="display: block; margin: auto;" />
 
 To simulate simplicity and complexity, the number of components in each
 new brand is drawn from a Poisson distribution where *λ* is the
@@ -299,7 +522,7 @@ four components when *λ* is 0.5, 3, and 15. Note that the normalization
 here is only for plotting purposes - We will using the raw output of
 `dpois` as the `prob` argument of base R’s `sample` function.
 
-<img src="README_files/figure-gfm/unnamed-chunk-13-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-23-1.png" style="display: block; margin: auto;" />
 
 At the beginning of each year in the ABM a set of `n_new` brands is
 created, where `n_new` is the average number of new brands that appear
@@ -409,7 +632,9 @@ component is rotatable (or includes at least one comma).
 
 ``` r
 #reshape components
-components <- data.table::data.table(components = components, rotatable = grepl(",", components))
+components <- data.table::data.table(components = components, rotatable = rotation$rot)
+components$rotatable[which(components$rotatable == "NA")] <- NA
+components$rotatable <- sapply(1:nrow(components), function(x){as.numeric(components$rotatable[[x]])})
 ```
 
 Eventually we can use the code below to set the limits of our prior for
@@ -446,25 +671,25 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 10.56808 secs
+    ## Time difference of 9.252252 secs
 
 ``` r
 #print output
 components_only
 ```
 
-    ##            [,1]         [,2]     [,3]     [,4]      [,5]      [,6]      [,7]
-    ## [1,] 0.06971858 0.0005446764 69.25016 42.80059 0.1553231 0.2324008 0.5036652
-    ## [2,] 0.06732915 0.0007264802 73.45358 45.12076 0.1611366 0.2428751 0.5261183
-    ## [3,] 0.06488282 0.0008824064 77.26222 47.44417 0.1658680 0.2424745 0.5452814
+    ##           [,1]        [,2]     [,3]     [,4]      [,5]      [,6]      [,7]
+    ## [1,] 0.1262454 0.001092583 48.82274 28.00492 0.2188949 0.3227590 0.6252781
+    ## [2,] 0.1216796 0.001326847 51.57430 29.60010 0.2269233 0.3292502 0.6487761
+    ## [3,] 0.1172985 0.001481174 54.17242 31.21708 0.2350065 0.3334895 0.6718291
     ##           [,8]        [,9]        [,10]    [,11]    [,12]       [,13]
-    ## [1,] 0.7331046 0.003258902 6.035003e-05 4427.866 2576.477 0.001498163
-    ## [2,] 0.7579393 0.003269161 6.054002e-05 4628.549 2702.874 0.001416510
-    ## [3,] 0.7804914 0.003218754 6.073120e-05 4832.888 2830.217 0.001334926
-    ##            [,14]       [,15]      [,16]
-    ## [1,] 0.001850346 0.010330956 0.01680850
-    ## [2,] 0.001911979 0.009745323 0.02155687
-    ## [3,] 0.001934105 0.009219126 0.02499443
+    ## [1,] 0.8432432 0.003985989 6.039377e-05 3152.904 1624.214 0.002046573
+    ## [2,] 0.8387845 0.003817256 6.059137e-05 3324.722 1707.403 0.001910821
+    ## [3,] 0.8358899 0.003708207 6.079027e-05 3504.408 1797.354 0.001787003
+    ##            [,14]      [,15]      [,16]
+    ## [1,] 0.003091642 0.01387194 0.04840072
+    ## [2,] 0.003216150 0.01298961 0.04654729
+    ## [3,] 0.003314504 0.01215910 0.04573382
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -476,7 +701,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 13.56745 secs
+    ## Time difference of 12.9881 secs
 
 ``` r
 #print output
@@ -484,17 +709,17 @@ components_angles
 ```
 
     ##            [,1]         [,2]     [,3]     [,4]       [,5]      [,6]      [,7]
-    ## [1,] 0.06980246 2.595852e-05 134.9473 64.31709 0.03401109 0.1747192 0.1320606
-    ## [2,] 0.06776623 2.597403e-05 142.9388 67.60559 0.03307405 0.1765979 0.1291975
-    ## [3,] 0.06560957 2.599428e-05 150.8790 71.02372 0.03182620 0.1847217 0.1246305
-    ##           [,8]         [,9]        [,10]    [,11]    [,12]        [,13]
-    ## [1,] 0.6554177 0.0010259505 6.035003e-05 8190.879 6038.906 0.0006933952
-    ## [2,] 0.6865609 0.0009686403 6.054002e-05 8344.956 6157.624 0.0006618714
-    ## [3,] 0.7128773 0.0009109681 6.073120e-05 8492.198 6284.284 0.0006360187
+    ## [1,] 0.06862005 2.602201e-05 117.0741 60.09520 0.05229205 0.1841395 0.1968592
+    ## [2,] 0.06616459 2.605931e-05 122.9373 63.07224 0.05258486 0.1878229 0.1992354
+    ## [3,] 0.06347842 2.604777e-05 129.2899 66.35475 0.05334449 0.1908851 0.2030318
+    ##           [,8]        [,9]        [,10]    [,11]    [,12]        [,13]
+    ## [1,] 0.6305798 0.001207875 6.039377e-05 7455.591 5311.057 0.0008094717
+    ## [2,] 0.7119751 0.001211827 6.059137e-05 7602.871 5402.904 0.0007728614
+    ## [3,] 0.7172830 0.001215805 6.079027e-05 7771.627 5503.630 0.0007330733
     ##             [,14]       [,15]       [,16]
-    ## [1,] 0.0007042282 0.004859993 0.007199219
-    ## [2,] 0.0007984626 0.004636136 0.008025625
-    ## [3,] 0.0008789293 0.004449420 0.008366009
+    ## [1,] 0.0009286188 0.005668631 0.006432071
+    ## [2,] 0.0010097156 0.005414649 0.009712940
+    ## [3,] 0.0010989059 0.005137807 0.010145963
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the 16 summary statistics

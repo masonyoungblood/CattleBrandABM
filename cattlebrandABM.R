@@ -38,10 +38,22 @@ brand_generator <- function(brands, components, zip, zip_dists, rot_prob, comple
     sim_angles <- rep(0, 4)
     
     #determine which components will be rotated
-    to_rot <- which(components$rotatable[sim_brand] & sample(c(TRUE, FALSE), length(sim_brand), replace = TRUE, prob = c(rot_prob, 1-rot_prob)))
+    to_rot <- which(!is.na(components$rotatable)[sim_brand] & sample(c(TRUE, FALSE), length(sim_brand), replace = TRUE, prob = c(rot_prob, 1-rot_prob)))
     
-    #rotate components
-    sim_angles[to_rot] <- sample(1:9, length(to_rot), replace = TRUE, prob = ((copy_angles+1)^copy_strength)*((1/(dist_angles+1))^dist_strength))
+    #if any components are to be rotated
+    if(length(to_rot) > 0){
+      for(m in to_rot){
+        #if there is only one possible angle
+        if(length(components$rotatable[[sim_brand[m]]]) == 1){
+          #assign it
+          sim_angles[m] <- components$rotatable[[sim_brand[m]]]
+        } else{ #otherwise
+          #rotate them separately, allowing for different angles of rotation for each - if a particular component can be rotated as 5, 7, and 9, then only the frequencies of those angles in the population are considered
+          sim_angles[m] <- sample(components$rotatable[[sim_brand[m]]], 1, prob = ((copy_angles[components$rotatable[[sim_brand[m]]]]+1)^copy_strength)*((1/(dist_angles[components$rotatable[[sim_brand[m]]]]+1))^dist_strength))
+        }
+      }
+      
+    }
   }
   
   #return simulated brand
