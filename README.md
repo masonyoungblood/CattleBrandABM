@@ -108,23 +108,26 @@ redundant components and restricting the possible angles of rotations
 for different symbols. All of these adjustments are stored in
 `components.xlsx`: the `collapse` sheet has which components should be
 converted to what along with their new angles, and the `rotation` sheet
-has which components can be rotated in which directions. The `rotation`
-sheet also has a column for each angle (1 to 9), where the value for
-each component is whether that angle is correct if it appears (NA),
-needs to be corrected to no rotation (0), or needs to be corrected to a
-different rotation (1 to 9).
+has which components can be rotated in which directions. For
+clarification, the possible rotation angles for each component are the
+first unique rotations for that shape. For example, the 1, 3, and 4
+rotations for the letter A are all identical (upside down) so 1 is kept
+as the first unique rotation. The `rotation` sheet also has a column for
+each angle (1 to 9), where the value for each component is whether that
+angle is correct if it appears (NA), needs to be corrected to no
+rotation (0), or needs to be corrected to a different rotation (1 to 9).
 
 All letter variations were converted to single categories. For example,
 A1 and A2, two stylistic variations of A with square and rounded tops,
 were both converted to A. The letter I is used primarily for vertical
-lines, so the other single line symbols (i.e. /, , and -) were converted
-to I (with their associated angles). 1, which could be easily mistaken
-for I, does not appear in the coding scheme. Double and triple lines are
-stored as separate symbols (i.e. = and -3). We chose to keep these as
-separate categories rather than convert them to multiple repetitions of
-I, as reducing components to their constituent parts introduces many
-other issues and could inflate the measured complexity (or number of
-components) of some brands.
+lines, so the other single line symbols (i.e. /, \\, and -) were
+converted to I (with their associated angles). 1, which could be easily
+mistaken for I, does not appear in the coding scheme. Double and triple
+lines are stored as separate symbols (i.e. = and -3). We chose to keep
+these as separate categories rather than convert them to multiple
+repetitions of I, as reducing components to their constituent parts
+introduces many other issues and could inflate the measured complexity
+(or number of components) of some brands.
 
 ), QC, and QC1 were all converted to ( (with their associated angles).
 \], BX1, and BX2 were all converted to \[ (with their associated
@@ -671,7 +674,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 9.252252 secs
+    ## Time difference of 9.29816 secs
 
 ``` r
 #print output
@@ -679,17 +682,17 @@ components_only
 ```
 
     ##           [,1]        [,2]     [,3]     [,4]      [,5]      [,6]      [,7]
-    ## [1,] 0.1262454 0.001092583 48.82274 28.00492 0.2188949 0.3227590 0.6252781
-    ## [2,] 0.1216796 0.001326847 51.57430 29.60010 0.2269233 0.3292502 0.6487761
-    ## [3,] 0.1172985 0.001481174 54.17242 31.21708 0.2350065 0.3334895 0.6718291
+    ## [1,] 0.1257654 0.001016128 48.48384 28.03327 0.2179365 0.3119930 0.6194036
+    ## [2,] 0.1217305 0.001277805 51.12101 29.52163 0.2261063 0.3272518 0.6414775
+    ## [3,] 0.1175028 0.001487047 53.75383 31.12770 0.2337563 0.3305545 0.6648865
     ##           [,8]        [,9]        [,10]    [,11]    [,12]       [,13]
-    ## [1,] 0.8432432 0.003985989 6.039377e-05 3152.904 1624.214 0.002046573
-    ## [2,] 0.8387845 0.003817256 6.059137e-05 3324.722 1707.403 0.001910821
-    ## [3,] 0.8358899 0.003708207 6.079027e-05 3504.408 1797.354 0.001787003
+    ## [1,] 0.8320879 0.003925595 6.039377e-05 3139.535 1640.679 0.002064144
+    ## [2,] 0.8260654 0.003696074 6.059137e-05 3306.669 1726.012 0.001932323
+    ## [3,] 0.8235342 0.003525836 6.079027e-05 3480.355 1816.685 0.001812029
     ##            [,14]      [,15]      [,16]
-    ## [1,] 0.003091642 0.01387194 0.04840072
-    ## [2,] 0.003216150 0.01298961 0.04654729
-    ## [3,] 0.003314504 0.01215910 0.04573382
+    ## [1,] 0.003035748 0.01399604 0.04265337
+    ## [2,] 0.003303657 0.01311155 0.04087216
+    ## [3,] 0.003421174 0.01230226 0.04164094
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -701,7 +704,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 12.9881 secs
+    ## Time difference of 12.84167 secs
 
 ``` r
 #print output
@@ -709,17 +712,17 @@ components_angles
 ```
 
     ##            [,1]         [,2]     [,3]     [,4]       [,5]      [,6]      [,7]
-    ## [1,] 0.06862005 2.602201e-05 117.0741 60.09520 0.05229205 0.1841395 0.1968592
-    ## [2,] 0.06616459 2.605931e-05 122.9373 63.07224 0.05258486 0.1878229 0.1992354
-    ## [3,] 0.06347842 2.604777e-05 129.2899 66.35475 0.05334449 0.1908851 0.2030318
+    ## [1,] 0.06996743 2.605863e-05 115.1112 59.27810 0.05305040 0.1861121 0.1976448
+    ## [2,] 0.06768132 2.606135e-05 121.2259 62.13755 0.05329468 0.1933363 0.1993414
+    ## [3,] 0.06569096 2.608854e-05 126.5837 64.85276 0.05403056 0.2035889 0.2028956
     ##           [,8]        [,9]        [,10]    [,11]    [,12]        [,13]
-    ## [1,] 0.6305798 0.001207875 6.039377e-05 7455.591 5311.057 0.0008094717
-    ## [2,] 0.7119751 0.001211827 6.059137e-05 7602.871 5402.904 0.0007728614
-    ## [3,] 0.7172830 0.001215805 6.079027e-05 7771.627 5503.630 0.0007330733
+    ## [1,] 0.7287550 0.001147482 6.039377e-05 7480.268 5324.465 0.0008093034
+    ## [2,] 0.7421838 0.001211827 6.059137e-05 7622.840 5412.567 0.0007734778
+    ## [3,] 0.7354593 0.001155015 6.079027e-05 7768.204 5496.253 0.0007397502
     ##             [,14]       [,15]       [,16]
-    ## [1,] 0.0009286188 0.005668631 0.006432071
-    ## [2,] 0.0010097156 0.005414649 0.009712940
-    ## [3,] 0.0010989059 0.005137807 0.010145963
+    ## [1,] 0.0008716506 0.005647146 0.009829048
+    ## [2,] 0.0009279877 0.005413970 0.010909019
+    ## [3,] 0.0010458834 0.005173509 0.010734785
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the 16 summary statistics
