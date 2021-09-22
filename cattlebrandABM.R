@@ -28,11 +28,13 @@ brand_generator <- function(brands, components, zip, zip_dists, rot_prob, comple
 
   #if angles are to be considered
   if(angles){
-    #generate frequencies of angles within the copy radius, where missing angles are assigned 0
-    copy_angles <- (as.numeric(Rfast::Table(c(0:9, brands[copy_rows, 5:8])))-1)[-1]
+    #generate frequencies of angles, nested for each component of the brand, within the copy radius, where missing angles are assigned 0
+    #copy_angles <- (as.numeric(Rfast::Table(c(0:9, brands[copy_rows, 5:8])))-1)[-1]
+    copy_angles <- sapply(sim_brand, function(x){(as.numeric(Rfast::Table(c(0:9, brands[copy_rows, 5:8][which(brands[copy_rows, 1:4] == x)])))-1)[-1]})
     
-    #generate frequencies of angles within the copy radius, where missing angles are assigned 0
-    dist_angles <- (as.numeric(Rfast::Table(c(0:9, brands[dist_rows, 5:8])))-1)[-1]
+    #generate frequencies of angles, nested for each component of the brand, within the copy radius, where missing angles are assigned 0
+    #dist_angles <- (as.numeric(Rfast::Table(c(0:9, brands[dist_rows, 5:8])))-1)[-1]
+    dist_angles <- sapply(sim_brand, function(x){(as.numeric(Rfast::Table(c(0:9, brands[dist_rows, 5:8][which(brands[dist_rows, 1:4] == x)])))-1)[-1]})
     
     #generate empty vector to fill with angles
     sim_angles <- rep(0, 4)
@@ -49,7 +51,7 @@ brand_generator <- function(brands, components, zip, zip_dists, rot_prob, comple
           sim_angles[m] <- components$rotatable[[sim_brand[m]]]
         } else{ #otherwise
           #rotate them separately, allowing for different angles of rotation for each - if a particular component can be rotated as 5, 7, and 9, then only the frequencies of those angles in the population are considered
-          sim_angles[m] <- sample(components$rotatable[[sim_brand[m]]], 1, prob = ((copy_angles[components$rotatable[[sim_brand[m]]]]+1)^copy_strength)*((1/(dist_angles[components$rotatable[[sim_brand[m]]]]+1))^dist_strength))
+          sim_angles[m] <- sample(components$rotatable[[sim_brand[m]]], 1, prob = ((copy_angles[, m][components$rotatable[[sim_brand[m]]]]+1)^copy_strength)*((1/(dist_angles[, m][components$rotatable[[sim_brand[m]]]]+1))^dist_strength))
         }
       }
       

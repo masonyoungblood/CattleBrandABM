@@ -485,12 +485,13 @@ When a new brand is created, the components and angles around it are
 sampled within two radii: one in which components and angles are more
 likely to be used (henceforth copying), and one in which components and
 angles are less likely to be used (henceforth distinctiveness). All of
-the components and angles present in each radii are compiled into
-frequency tables that are used for weighted random sampling. The
-probability that a rancher uses a particular component (or angle) is
-based on the frequency of it within the copying radius, raised to an
-exponent *C*, and the inverse frequency of it within the distinctiveness
-radius, raised to an exponent *D*.
+the components present in each radii are compiled into frequency tables
+that are used for weighted random sampling. Once components have been
+sampled, all of the rotations of each component that appear in each
+radii are compiled as well. The probability that a rancher uses a
+particular component (or angle) is based on the frequency of it within
+the copying radius, raised to an exponent *C*, and the inverse frequency
+of it within the distinctiveness radius, raised to an exponent *D*.
 
 <!-- $$P(x) = F_x^C \times \left(\frac{1}{F_x}\right)^D$$ -->
 <center>
@@ -501,9 +502,8 @@ radius, raised to an exponent *D*.
 probability of adopting components and angles, where zero is neutrality,
 one is proportional to their observed frequencies, and values greater
 than one increase their influence beyond their observed frequencies.
-When only a subset of angles are possible for a particular component,
-then only the frequencies of those particular angles in the population
-are considered.
+When only a subset of angles are possible for a particular component
+then only the frequencies of those particular angles are considered.
 
 The map below shows an example of copying and distinctiveness radii (200
 km and 100 km, respectively) around a target zip code, shown by the
@@ -674,7 +674,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 9.29816 secs
+    ## Time difference of 9.373357 secs
 
 ``` r
 #print output
@@ -682,17 +682,17 @@ components_only
 ```
 
     ##           [,1]        [,2]     [,3]     [,4]      [,5]      [,6]      [,7]
-    ## [1,] 0.1257654 0.001016128 48.48384 28.03327 0.2179365 0.3119930 0.6194036
-    ## [2,] 0.1217305 0.001277805 51.12101 29.52163 0.2261063 0.3272518 0.6414775
-    ## [3,] 0.1175028 0.001487047 53.75383 31.12770 0.2337563 0.3305545 0.6648865
+    ## [1,] 0.1263941 0.001091845 48.78947 28.05580 0.2190932 0.3131314 0.6249221
+    ## [2,] 0.1223151 0.001353849 51.35586 29.51224 0.2265083 0.3209367 0.6509123
+    ## [3,] 0.1182678 0.001433075 53.71223 30.98427 0.2338683 0.3197364 0.6717401
     ##           [,8]        [,9]        [,10]    [,11]    [,12]       [,13]
-    ## [1,] 0.8320879 0.003925595 6.039377e-05 3139.535 1640.679 0.002064144
-    ## [2,] 0.8260654 0.003696074 6.059137e-05 3306.669 1726.012 0.001932323
-    ## [3,] 0.8235342 0.003525836 6.079027e-05 3480.355 1816.685 0.001812029
+    ## [1,] 0.8466434 0.003925595 6.039377e-05 3180.023 1636.488 0.002030238
+    ## [2,] 0.8403536 0.003817256 6.059137e-05 3342.398 1716.960 0.001911714
+    ## [3,] 0.8361776 0.003708207 6.079027e-05 3506.794 1795.518 0.001797815
     ##            [,14]      [,15]      [,16]
-    ## [1,] 0.003035748 0.01399604 0.04265337
-    ## [2,] 0.003303657 0.01311155 0.04087216
-    ## [3,] 0.003421174 0.01230226 0.04164094
+    ## [1,] 0.003132943 0.01373806 0.05118708
+    ## [2,] 0.003250381 0.01294974 0.04850526
+    ## [3,] 0.003375814 0.01219360 0.04589920
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -704,7 +704,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 12.84167 secs
+    ## Time difference of 13.98834 secs
 
 ``` r
 #print output
@@ -712,17 +712,17 @@ components_angles
 ```
 
     ##            [,1]         [,2]     [,3]     [,4]       [,5]      [,6]      [,7]
-    ## [1,] 0.06996743 2.605863e-05 115.1112 59.27810 0.05305040 0.1861121 0.1976448
-    ## [2,] 0.06768132 2.606135e-05 121.2259 62.13755 0.05329468 0.1933363 0.1993414
-    ## [3,] 0.06569096 2.608854e-05 126.5837 64.85276 0.05403056 0.2035889 0.2028956
+    ## [1,] 0.06911604 2.598347e-05 114.2805 59.31047 0.05399812 0.1964297 0.2003650
+    ## [2,] 0.06740960 2.597672e-05 120.1990 61.94633 0.05457958 0.2006919 0.2041602
+    ## [3,] 0.06524512 2.603556e-05 125.8552 64.76411 0.05533428 0.1999383 0.2082756
     ##           [,8]        [,9]        [,10]    [,11]    [,12]        [,13]
-    ## [1,] 0.7287550 0.001147482 6.039377e-05 7480.268 5324.465 0.0008093034
-    ## [2,] 0.7421838 0.001211827 6.059137e-05 7622.840 5412.567 0.0007734778
-    ## [3,] 0.7354593 0.001155015 6.079027e-05 7768.204 5496.253 0.0007397502
+    ## [1,] 0.7417958 0.001207875 6.039377e-05 7494.132 5332.958 0.0008088113
+    ## [2,] 0.7449157 0.001393602 6.059137e-05 7672.114 5429.830 0.0007645312
+    ## [3,] 0.7409850 0.001398176 6.079027e-05 7804.862 5512.375 0.0007351486
     ##             [,14]       [,15]       [,16]
-    ## [1,] 0.0008716506 0.005647146 0.009829048
-    ## [2,] 0.0009279877 0.005413970 0.010909019
-    ## [3,] 0.0010458834 0.005173509 0.010734785
+    ## [1,] 0.0008806556 0.005648773 0.009854479
+    ## [2,] 0.0009645556 0.005345944 0.010405792
+    ## [3,] 0.0010253315 0.005133877 0.010744853
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the 16 summary statistics
