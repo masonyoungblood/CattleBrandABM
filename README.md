@@ -559,11 +559,7 @@ ABM collects the following summary statistics at the end of each year:
         2.  Proportion of brands that are the most rare type
         3.  Shannon’s diversity index
         4.  Simpson’s diversity index
-    -   Spatial diversity:
-        1.  Jaccard index of beta diversity (zip codes)
-        2.  Morisita-Horn index of beta diversity (zip codes)
-        3.  Jaccard index of beta diversity (counties)
-        4.  Morisita-Horn index of beta diversity (counties)
+        5.  Mean Levenshtein distance (from random subset)
 
 For all diversity metrics we calculated their Hill number counterparts,
 because they are [measured on the same
@@ -580,7 +576,14 @@ the
 [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100)
 beta diversity indices to sampling error. We calculated beta diversity
 at both the zip code and county-level to assess spatial diversity at two
-different resolutions.
+different resolutions. Spatial diversity indices were not calculated at
+the brand level, since duplicated brands are uncommon at the level of
+both zip codes and counties. The mean Levenshtein distance (a.k.a. edit
+distance), or the [minimum number of insertions, deletions, and
+substitions required to convert one sequence to
+another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html),
+was calculated from a random subset of brands specified by the
+`edit_dist_prop` argument of the ABM function.
 
 The ABM parameters will be fit to the observed data using the random
 forest version of approximate Bayesian computation (ABC). Random forest
@@ -670,29 +673,29 @@ start <- Sys.time()
 components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
                                   init_year = 2008, sampling_years = c(2014, 2015, 2016), n_new, n_old,
                                   rot_prob, complexity = 3, copy_radius = 200, copy_strength = 1,
-                                  dist_radius = 100, dist_strength = 1, angles = FALSE)
+                                  dist_radius = 100, dist_strength = 1, angles = FALSE, edit_dist_prop = 0.1)
 Sys.time() - start
 ```
 
-    ## Time difference of 9.373357 secs
+    ## Time difference of 7.513771 secs
 
 ``` r
 #print output
 components_only
 ```
 
-    ##           [,1]        [,2]     [,3]     [,4]      [,5]      [,6]      [,7]
-    ## [1,] 0.1263941 0.001091845 48.78947 28.05580 0.2190932 0.3131314 0.6249221
-    ## [2,] 0.1223151 0.001353849 51.35586 29.51224 0.2265083 0.3209367 0.6509123
-    ## [3,] 0.1182678 0.001433075 53.71223 30.98427 0.2338683 0.3197364 0.6717401
-    ##           [,8]        [,9]        [,10]    [,11]    [,12]       [,13]
-    ## [1,] 0.8466434 0.003925595 6.039377e-05 3180.023 1636.488 0.002030238
-    ## [2,] 0.8403536 0.003817256 6.059137e-05 3342.398 1716.960 0.001911714
-    ## [3,] 0.8361776 0.003708207 6.079027e-05 3506.794 1795.518 0.001797815
-    ##            [,14]      [,15]      [,16]
-    ## [1,] 0.003132943 0.01373806 0.05118708
-    ## [2,] 0.003250381 0.01294974 0.04850526
-    ## [3,] 0.003375814 0.01219360 0.04589920
+    ##      comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
+    ## 2014 0.1274301 0.001013619     48.45207     27.79170    0.2178289   0.3155386
+    ## 2015 0.1233935 0.001300796     50.89246     29.19378    0.2247323   0.3215454
+    ## 2016 0.1191417 0.001430429     53.43501     30.75974    0.2329517   0.3332817
+    ##      comp_jac_county comp_mh_county  brand_most  brand_least brand_shannon
+    ## 2014       0.6187806      0.8374054 0.003925595 6.039377e-05      3160.819
+    ## 2015       0.6427236      0.8422623 0.003817256 6.059137e-05      3330.829
+    ## 2016       0.6631064      0.8286799 0.003708207 6.079027e-05      3499.007
+    ##      brand_simpson brand_edit
+    ## 2014      1629.369   2.546142
+    ## 2015      1708.753   2.558299
+    ## 2016      1782.320   2.561750
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -700,32 +703,32 @@ start <- Sys.time()
 components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
                                     init_year = 2008, sampling_years = c(2014, 2015, 2016), n_new, n_old, 
                                     rot_prob, complexity = 3, copy_radius = 200, copy_strength = 1, 
-                                    dist_radius = 100, dist_strength = 1, angles = TRUE)
+                                    dist_radius = 100, dist_strength = 1, angles = TRUE, edit_dist_prop = 0.1)
 Sys.time() - start
 ```
 
-    ## Time difference of 13.98834 secs
+    ## Time difference of 11.29214 secs
 
 ``` r
 #print output
 components_angles
 ```
 
-    ##            [,1]         [,2]     [,3]     [,4]       [,5]      [,6]      [,7]
-    ## [1,] 0.06911604 2.598347e-05 114.2805 59.31047 0.05399812 0.1964297 0.2003650
-    ## [2,] 0.06740960 2.597672e-05 120.1990 61.94633 0.05457958 0.2006919 0.2041602
-    ## [3,] 0.06524512 2.603556e-05 125.8552 64.76411 0.05533428 0.1999383 0.2082756
-    ##           [,8]        [,9]        [,10]    [,11]    [,12]        [,13]
-    ## [1,] 0.7417958 0.001207875 6.039377e-05 7494.132 5332.958 0.0008088113
-    ## [2,] 0.7449157 0.001393602 6.059137e-05 7672.114 5429.830 0.0007645312
-    ## [3,] 0.7409850 0.001398176 6.079027e-05 7804.862 5512.375 0.0007351486
-    ##             [,14]       [,15]       [,16]
-    ## [1,] 0.0008806556 0.005648773 0.009854479
-    ## [2,] 0.0009645556 0.005345944 0.010405792
-    ## [3,] 0.0010253315 0.005133877 0.010744853
+    ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
+    ## 2014 0.06764201 2.598618e-05     115.0994     60.36204   0.05510213   0.1831832
+    ## 2015 0.06547665 2.598280e-05     121.0325     63.13547   0.05504943   0.1862863
+    ## 2016 0.06291339 2.604031e-05     127.2692     66.41657   0.05497135   0.1881733
+    ##      comp_jac_county comp_mh_county   brand_most  brand_least brand_shannon
+    ## 2014       0.2042131      0.6948251 0.0010266940 6.039377e-05      7526.388
+    ## 2015       0.2056450      0.7100687 0.0010906447 6.059137e-05      7724.663
+    ## 2016       0.2062532      0.7156524 0.0009726444 6.079027e-05      7876.682
+    ##      brand_simpson brand_edit
+    ## 2014      5412.765   2.605794
+    ## 2015      5568.362   2.601328
+    ## 2016      5677.055   2.615886
 
 The output of each model is a matrix with a row for each of the three
-sampling years, and a column for each of the 16 summary statistics
+sampling years, and a column for each of the 13 summary statistics
 collected in that year. After some profiling and optimization (using
 `profvis`) the runtime for the agent-based model is just barely fast
 enough for generative inference. I tried to further optimize the way

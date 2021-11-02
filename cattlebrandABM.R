@@ -5,6 +5,9 @@
   #table(c(all, actual))[subtraction and trimming] because it is faster
 #we are also storing unique(stuff) as a separate variable each time because
   #it ends up being faster
+#adist (base R pairwise levenshtein function) is, counterintuitively, the most
+  #efficient method... textTinyR has a much faster individual levenshtein
+  #function, but it does not scale up as efficiently
 
 #faster version of %in%: https://stackoverflow.com/questions/32934933/faster-in-operator
 `%fin%` <- function(x, table){
@@ -69,12 +72,13 @@ brand_generator <- function(brands, components, zip, zip_dists, rot_prob, comple
 }
 
 #cattle brand ABM, which is basically an iterating wrapper for the brand generator
-cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_year, sampling_years, n_new, n_old, rot_prob, complexity, copy_radius, copy_strength, dist_radius, dist_strength, angles = TRUE){
+cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_year, sampling_years, n_new, n_old, rot_prob, complexity, copy_radius, copy_strength, dist_radius, dist_strength, angles = TRUE, edit_dist_prop = 0){
   #get number of timesteps
   t_steps <- max(sampling_years) - init_year
   
   #create empty output matrix to store the summary statistics (columns) from each sampling year (rows)
-  output <- matrix(NA, nrow = length(sampling_years), ncol = 16)
+  if(edit_dist_prop > 0){output <- matrix(NA, nrow = length(sampling_years), ncol = 13)}
+  if(edit_dist_prop == 0){output <- matrix(NA, nrow = length(sampling_years), ncol = 12)}
   
   running_brands <- init_brands
   
@@ -95,6 +99,12 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
     if(i %fin% c(sampling_years - init_year)){
       #if angles are not considered, then generate component frequencies without them (and generate brand frequencies with respective columns selected)
       if(!angles){
+        #if edit distances are to be calculated and included in summary statistics, then calculate them
+        if(edit_dist_prop > 0){
+          #construct matrix of edit distances
+          edit_dist_mat <- adist(sapply(sample(nrow(running_brands), nrow(running_brands)*edit_dist_prop, replace = FALSE), function(x){intToUtf8(running_brands[x, 1:4])}))
+        }
+        
         #get component frequencies
         comp_freqs <- as.numeric(sort(Rfast::Table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), decreasing = TRUE))
         
@@ -127,45 +137,19 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
         if(length(which(Rfast::rowsums(comp_beta_county_mat) == 0)) > 0){
           comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
         }
-        
-        #construct brands by zip codes matrix
-        brand_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
-          temp <- matrix(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4], ncol = 4) #construct temp matrix of brands in the corresponding zip code
-          if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
-          } else{ #if not
-            rep(0, length(unique_brands)) #return same number of zeros
-          }
-        }))
-        if(length(which(Rfast::colsums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[, -which(Rfast::colsums(brand_beta_zip_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[-which(Rfast::rowsums(brand_beta_zip_mat) == 0), ] #remove empty rows
-        }
-        
-        #construct brands by counties matrix
-        brand_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
-          temp <- matrix(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4], ncol = 4) #construct temp matrix of brands in the corresponding county
-          if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
-          } else{ #if not
-            rep(0, length(unique_brands)) #return same number of zeros
-          }
-        }))
-        if(length(which(Rfast::colsums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[, -which(Rfast::colsums(brand_beta_county_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[-which(Rfast::rowsums(brand_beta_county_mat) == 0), ] #remove empty rows
-        }
-        
+
         #remove temporary variables
         rm(list = c("all_brands", "unique_brands", "unique_counties"))
       }
       
       #if angles are considered, then generate component frequencies with them
       if(angles){
+        #if edit distances are to be calculated and included in summary statistics, then calculate them
+        if(edit_dist_prop > 0){
+          #construct matrix of edit distances
+          edit_dist_mat <- adist(sapply(sample(nrow(running_brands), nrow(running_brands)*edit_dist_prop, replace = FALSE), function(x){intToUtf8(as.numeric(paste0(running_brands[x, 1:4], running_brands[x, 5:8])))}))
+        }
+        
         #extract combinations of components and angles (for now just combining them as a string and remove "0 0")
         comp_angle_combos <- c(sapply(1:nrow(running_brands), function(x){paste(c(running_brands[x, 1:4]), c(running_brands[x, 5:8]))}))
         unique_comp_angle_combos <- unique(comp_angle_combos) #run this before the next line, because "0 0" needs to be accounted for later
@@ -204,38 +188,6 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
           comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
         }
         
-        #construct brands by zip codes matrix
-        brand_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
-          temp <- matrix(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:8], ncol = 8) #construct temp matrix of brands in the corresponding zip code
-          if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
-          } else{ #if not
-            rep(0, length(unique_brands)) #return same number of zeros
-          }
-        }))
-        if(length(which(Rfast::colsums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[, -which(Rfast::colsums(brand_beta_zip_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(brand_beta_zip_mat) == 0)) > 0){
-          brand_beta_zip_mat <- brand_beta_zip_mat[-which(Rfast::rowsums(brand_beta_zip_mat) == 0), ] #remove empty rows
-        }
-        
-        #construct brands by counties matrix
-        brand_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
-          temp <- matrix(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:8], ncol = 8) #construct temp matrix of brands in the corresponding county
-          if(nrow(temp) > 0){ #if brands exist in that location
-            as.numeric(table(factor(sapply(1:nrow(temp), function(x){paste(temp[x, ], collapse = " ")}), levels = unique_brands))) #return frequency vector
-          } else{ #if not
-            rep(0, length(unique_brands)) #return same number of zeros
-          }
-        }))
-        if(length(which(Rfast::colsums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[, -which(Rfast::colsums(brand_beta_county_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(brand_beta_county_mat) == 0)) > 0){
-          brand_beta_county_mat <- brand_beta_county_mat[-which(Rfast::rowsums(brand_beta_county_mat) == 0), ] #remove empty rows
-        }
-        
         #remove temporary variables
         rm(list = c("comp_angle_combos", "unique_comp_angle_combos", "all_brands", "unique_brands", "unique_counties"))
       }
@@ -245,33 +197,42 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
                           min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
                           hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
                           hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
-                          #exp(summary(nls(y ~ SSasymp(x, yf, y0, log_alpha), data = data.frame(y = comp_freqs, x = 1:length(comp_freqs))))$coefficients[3]), #rate constant of exponential decay curve (singularity issues)
                           hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
                           hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
                           hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
                           hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity) #morisita-horn index (counties)
       
       #calculate brand summary statistics
-      brand_sum_stats <- c(max(brand_freqs)/sum(brand_freqs), #proportion of the most common brand
-                           min(brand_freqs)/sum(brand_freqs), #proportion of the least common brand
-                           hillR::hill_taxa(brand_freqs, q = 1), #shannon's diversity index
-                           hillR::hill_taxa(brand_freqs, q = 2), #simpson's diversity index
-                           #exp(summary(nls(y ~ SSasymp(x, yf, y0, log_alpha), data = data.frame(y = brand_freqs, x = 1:length(brand_freqs))))$coefficients[3]), #rate constant of exponential decay curve (singularity issues)
-                           hillR::hill_taxa_parti(brand_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
-                           hillR::hill_taxa_parti(brand_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
-                           hillR::hill_taxa_parti(brand_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
-                           hillR::hill_taxa_parti(brand_beta_county_mat, q = 2)$local_similarity) #morisita-horn index (counties)
+      if(edit_dist_prop > 0){
+        brand_sum_stats <- c(max(brand_freqs)/sum(brand_freqs), #proportion of the most common brand
+                             min(brand_freqs)/sum(brand_freqs), #proportion of the least common brand
+                             hillR::hill_taxa(brand_freqs, q = 1), #shannon's diversity index
+                             hillR::hill_taxa(brand_freqs, q = 2), #simpson's diversity index
+                             mean(edit_dist_mat[upper.tri(edit_dist_mat)])) #mean edit distance
+
+      }
+      if(edit_dist_prop == 0){
+        brand_sum_stats <- c(max(brand_freqs)/sum(brand_freqs), #proportion of the most common brand
+                             min(brand_freqs)/sum(brand_freqs), #proportion of the least common brand
+                             hillR::hill_taxa(brand_freqs, q = 1), #shannon's diversity index
+                             hillR::hill_taxa(brand_freqs, q = 2)) #simpson's diversity index
+      }
       
       #store summary statistics in the output matrix
       output[match(i, sampling_years - init_year), ] <- c(comp_sum_stats, brand_sum_stats)
       
       #remove temporary objects
-      rm(list = c("comp_freqs", "brand_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "comp_sum_stats", "brand_sum_stats"))
+      if(edit_dist_prop > 0){rm(list = c("comp_freqs", "brand_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "comp_sum_stats", "brand_sum_stats", "edit_dist_mat"))}
+      if(edit_dist_prop == 0){rm(list = c("comp_freqs", "brand_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "comp_sum_stats", "brand_sum_stats"))}
     }
     
     #remove temporary objects
     rm(list = c("new_zips", "new_brands"))
   }
+  
+  if(edit_dist_prop > 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county", "brand_most", "brand_least", "brand_shannon", "brand_simpson", "brand_edit")}
+  if(edit_dist_prop == 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county", "brand_most", "brand_least", "brand_shannon", "brand_simpson")}
+  rownames(output) <- sampling_years
   
   return(output)
 }

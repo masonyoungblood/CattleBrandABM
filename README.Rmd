@@ -532,13 +532,9 @@ The ABM is initialized with the earliest year of observed data and runs through 
     2. Proportion of brands that are the most rare type
     3. Shannon's diversity index
     4. Simpson's diversity index
-  - Spatial diversity:
-    1. Jaccard index of beta diversity (zip codes)
-    2. Morisita-Horn index of beta diversity (zip codes)
-    3. Jaccard index of beta diversity (counties)
-    4. Morisita-Horn index of beta diversity (counties)
+    5. Mean Levenshtein distance (from random subset)
 
-For all diversity metrics we calculated their Hill number counterparts, because they are [measured on the same scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and [better account for relative abundance](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-0133.1). Shannon's diversity index emphasizes more rare types whereas Simpson's diversity index emphasizes more common types. The Jaccard and Morisita-Horn indices were similarly chosen for their complementarity. The Morisita-Horn index is a commonly used [abundance-based](https://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2005.00489.x) beta diversity index, whereas the Jaccard index is the most robust of the [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100) beta diversity indices to sampling error. We calculated beta diversity at both the zip code and county-level to assess spatial diversity at two different resolutions.
+For all diversity metrics we calculated their Hill number counterparts, because they are [measured on the same scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and [better account for relative abundance](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-0133.1). Shannon's diversity index emphasizes more rare types whereas Simpson's diversity index emphasizes more common types. The Jaccard and Morisita-Horn indices were similarly chosen for their complementarity. The Morisita-Horn index is a commonly used [abundance-based](https://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2005.00489.x) beta diversity index, whereas the Jaccard index is the most robust of the [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100) beta diversity indices to sampling error. We calculated beta diversity at both the zip code and county-level to assess spatial diversity at two different resolutions. Spatial diversity indices were not calculated at the brand level, since duplicated brands are uncommon at the level of both zip codes and counties. The mean Levenshtein distance (a.k.a. edit distance), or the [minimum number of insertions, deletions, and substitions required to convert one sequence to another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html), was calculated from a random subset of brands specified by the `edit_dist_prop` argument of the ABM function.
 
 The ABM parameters will be fit to the observed data using the random forest version of approximate Bayesian computation (ABC). Random forest ABC is [robust to the number of summary statistics](https://academic.oup.com/bioinformatics/article/32/6/859/1744513) and even [ranks them according to their importance](https://academic.oup.com/bioinformatics/article/35/10/1720/5132692), which means that we will not have to [reduce the dimensionality](https://projecteuclid.org/journals/statistical-science/volume-28/issue-2/A-Comparative-Review-of-Dimension-Reduction-Methods-in-Approximate-Bayesian/10.1214/12-STS406.full) of our summary statistics prior to inference.
 
@@ -600,7 +596,7 @@ start <- Sys.time()
 components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
                                   init_year = 2008, sampling_years = c(2014, 2015, 2016), n_new, n_old,
                                   rot_prob, complexity = 3, copy_radius = 200, copy_strength = 1,
-                                  dist_radius = 100, dist_strength = 1, angles = FALSE)
+                                  dist_radius = 100, dist_strength = 1, angles = FALSE, edit_dist_prop = 0.1)
 Sys.time() - start
 
 #print output
@@ -611,11 +607,11 @@ start <- Sys.time()
 components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
                                     init_year = 2008, sampling_years = c(2014, 2015, 2016), n_new, n_old, 
                                     rot_prob, complexity = 3, copy_radius = 200, copy_strength = 1, 
-                                    dist_radius = 100, dist_strength = 1, angles = TRUE)
+                                    dist_radius = 100, dist_strength = 1, angles = TRUE, edit_dist_prop = 0.1)
 Sys.time() - start
 
 #print output
 components_angles
 ```
 
-The output of each model is a matrix with a row for each of the three sampling years, and a column for each of the 16 summary statistics collected in that year. After some profiling and optimization (using `profvis`) the runtime for the agent-based model is just barely fast enough for generative inference. I tried to further optimize the way that unique brands and component/angle combinations are handled by leaving them as matrices of integers instead of converting them into concatenated strings, but surprisingly the string method is significantly faster.
+The output of each model is a matrix with a row for each of the three sampling years, and a column for each of the 13 summary statistics collected in that year. After some profiling and optimization (using `profvis`) the runtime for the agent-based model is just barely fast enough for generative inference. I tried to further optimize the way that unique brands and component/angle combinations are handled by leaving them as matrices of integers instead of converting them into concatenated strings, but surprisingly the string method is significantly faster.
