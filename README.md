@@ -677,7 +677,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 7.079565 secs
+    ## Time difference of 7.070402 secs
 
 ``` r
 #print output
@@ -685,13 +685,13 @@ components_only
 ```
 
     ##      comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.1271439 0.001219544     48.90010     27.98757    0.2190987   0.3149678
-    ## 2015 0.1232113 0.001347988     51.55374     29.44841    0.2276377   0.3192182
-    ## 2016 0.1192142 0.001503136     54.23183     31.05511    0.2356033   0.3224505
+    ## 2014 0.1270833 0.001067708     48.87470     27.90924    0.2194838   0.3094007
+    ## 2015 0.1228331 0.001355543     51.53533     29.42031    0.2269817   0.3136859
+    ## 2016 0.1187559 0.001538221     54.14070     30.97014    0.2343248   0.3126131
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2014       0.6296395      0.8400873   2.526767
-    ## 2015       0.6535826      0.8344304   2.598449
-    ## 2016       0.6729862      0.8297132   2.587773
+    ## 2014       0.6278594      0.8308700   2.517587
+    ## 2015       0.6523364      0.8282471   2.547669
+    ## 2016       0.6712061      0.8215223   2.583820
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -703,7 +703,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 11.34226 secs
+    ## Time difference of 11.40968 secs
 
 ``` r
 #print output
@@ -711,13 +711,13 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.06982563 2.606407e-05     114.8226     59.10205   0.05387934   0.1800680
-    ## 2015 0.06724574 2.608446e-05     120.8924     62.06673   0.05427838   0.1930061
-    ## 2016 0.06498525 2.610898e-05     126.8637     65.09952   0.05442244   0.1950089
+    ## 2014 0.06893506 2.597403e-05     115.0385     59.48065   0.05359652   0.1815545
+    ## 2015 0.06616139 2.595582e-05     121.1329     62.52166   0.05388733   0.1843298
+    ## 2016 0.06381652 2.597335e-05     126.9784     65.45652   0.05443846   0.1942493
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2014       0.2024465      0.7108611   2.577708
-    ## 2015       0.2048734      0.7266757   2.620721
-    ## 2016       0.2069448      0.7195423   2.609951
+    ## 2014       0.2001905      0.7548702   2.589767
+    ## 2015       0.2029134      0.7469645   2.650675
+    ## 2016       0.2055023      0.7418804   2.665939
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the nine summary statistics
@@ -759,5 +759,9 @@ sum_stats <- do.call("rbind", sum_stats)
 sim_test <- cbind(priors, sum_stats)
 save(sim_test, file = "sim_test.RData")
 ```
+
+In this plot, each row corresponds to the nine summary statistics and
+each column corresponds to the three dynamic parameters in the ABM (A:
+complexity, B: copying strength, C: distinctiveness strength).
 
 <img src="README_files/figure-gfm/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
