@@ -522,19 +522,15 @@ The ABM is initialized with the earliest year of observed data and runs through 
     3. Shannon's diversity index
     4. Simpson's diversity index
   - Spatial diversity:
-    1. Jaccard index of beta diversity (zip codes)
-    2. Morisita-Horn index of beta diversity (zip codes)
-    3. Jaccard index of beta diversity (counties)
-    4. Morisita-Horn index of beta diversity (counties)
+    5. Jaccard index of beta diversity (zip codes)
+    6. Morisita-Horn index of beta diversity (zip codes)
+    7. Jaccard index of beta diversity (counties)
+    8. Morisita-Horn index of beta diversity (counties)
 * For brands:
   - Overall diversity:
-    1. Proportion of brands that are the most common type
-    2. Proportion of brands that are the most rare type
-    3. Shannon's diversity index
-    4. Simpson's diversity index
-    5. Mean Levenshtein distance (from random subset)
+    9. Mean Levenshtein distance (from random subset)
 
-For all diversity metrics we calculated their Hill number counterparts, because they are [measured on the same scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and [better account for relative abundance](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-0133.1). Shannon's diversity index emphasizes more rare types whereas Simpson's diversity index emphasizes more common types. The Jaccard and Morisita-Horn indices were similarly chosen for their complementarity. The Morisita-Horn index is a commonly used [abundance-based](https://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2005.00489.x) beta diversity index, whereas the Jaccard index is the most robust of the [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100) beta diversity indices to sampling error. We calculated beta diversity at both the zip code and county-level to assess spatial diversity at two different resolutions. Spatial diversity indices were not calculated at the brand level, since duplicated brands are uncommon at the level of both zip codes and counties. The mean Levenshtein distance (a.k.a. edit distance), or the [minimum number of insertions, deletions, and substitions required to convert one sequence to another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html), was calculated from a random subset of brands specified by the `edit_dist_prop` argument of the ABM function.
+For all diversity metrics we calculated their Hill number counterparts, because they are [measured on the same scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and [better account for relative abundance](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-0133.1). Shannon's diversity index emphasizes more rare types whereas Simpson's diversity index emphasizes more common types. The Jaccard and Morisita-Horn indices were similarly chosen for their complementarity. The Morisita-Horn index is a commonly used [abundance-based](https://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2005.00489.x) beta diversity index, whereas the Jaccard index is the most robust of the [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100) beta diversity indices to sampling error. We calculated beta diversity at both the zip code and county-level to assess spatial diversity at two different resolutions. Diversity indices were not calculated at the level of brands, since duplicated brands in the model are not actually the same type (i.e. duplicates in the model and data correspond to slight variations of the same set of components that are only coded as the same). The mean Levenshtein distance (a.k.a. edit distance), or the [minimum number of insertions, deletions, and substitions required to convert one sequence to another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html), was calculated from a random subset of brands specified by the `edit_dist_prop` argument of the ABM function.
 
 The ABM parameters will be fit to the observed data using the random forest version of approximate Bayesian computation (ABC). Random forest ABC is [robust to the number of summary statistics](https://academic.oup.com/bioinformatics/article/32/6/859/1744513) and even [ranks them according to their importance](https://academic.oup.com/bioinformatics/article/35/10/1720/5132692), which means that we will not have to [reduce the dimensionality](https://projecteuclid.org/journals/statistical-science/volume-28/issue-2/A-Comparative-Review-of-Dimension-Reduction-Methods-in-Approximate-Bayesian/10.1214/12-STS406.full) of our summary statistics prior to inference.
 
@@ -578,6 +574,8 @@ We also need to reshape components so it includes whether or not a component is 
 components <- data.table::data.table(components = components, rotatable = rotation$rot)
 components$rotatable[which(components$rotatable == "NA")] <- NA
 components$rotatable <- sapply(1:nrow(components), function(x){as.numeric(components$rotatable[[x]])})
+
+#EXPORT THIS, INCLUDING WHICH COMPONENTS WERE COMPRESSED INTO WHICH COMPONENTS
 ```
 
 Eventually we can use the code below to set the limits of our prior for the sizes of the two radii.
@@ -614,4 +612,44 @@ Sys.time() - start
 components_angles
 ```
 
-The output of each model is a matrix with a row for each of the three sampling years, and a column for each of the 13 summary statistics collected in that year. After some profiling and optimization (using `profvis`) the runtime for the agent-based model is just barely fast enough for generative inference. I tried to further optimize the way that unique brands and component/angle combinations are handled by leaving them as matrices of integers instead of converting them into concatenated strings, but surprisingly the string method is significantly faster.
+The output of each model is a matrix with a row for each of the three sampling years, and a column for each of the nine summary statistics collected in that year. After some profiling and optimization (using `profvis`) the runtime for the agent-based model is just barely fast enough for generative inference. I tried to further optimize the way that unique brands and component/angle combinations are handled by leaving them as matrices of integers instead of converting them into concatenated strings, but surprisingly the string method is significantly faster.
+
+Now let's ensure that variation in our parameter values actually leads to variation in our summary statistics. To do this, we'll run 1000 simulations of the model assuming the same radii as above but with varying parameter values for `complexity`, `copy_strength`, and `dist_strength`. By plotting each dynamic parameter value against the summary statistics that they generate, we can insure that variation in one corresponds to variation in the other.
+
+```{r eval=FALSE}
+#set number of simulations and cores
+n_sims <- 1000
+n_cores <- parallel::detectCores()-1
+
+#get uniform priors for three main dynamic parameters
+priors <- data.frame(complexity = runif(n_sims, min = 0.5, max = 15), 
+                     copy_strength = runif(n_sims, min = 0, max = 5),
+                     dist_strength = runif(n_sims, min = 0, max = 5))
+
+#run simulations
+sum_stats <- parallel::mclapply(1:n_sims, function(x){cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
+                                                                     init_year = 2008, sampling_years = c(2016), n_new, n_old,
+                                                                     rot_prob, complexity = priors$complexity[x], copy_radius = 200,
+                                                                     copy_strength = priors$copy_strength[x], dist_radius = 100,
+                                                                     dist_strength = priors$dist_strength[x], angles = FALSE, edit_dist_prop = 0.1)}, mc.cores = n_cores)
+
+#simplify and save output
+sum_stats <- do.call("rbind", sum_stats)
+sim_test <- cbind(priors, sum_stats)
+save(sim_test, file = "sim_test.RData")
+```
+
+```{r echo=FALSE, fig.align="center", fig.height=10, fig.width=3.5}
+load("sim_test.RData")
+
+plots_1 <- lapply(1:9, function(x){ggplot2::ggplot(sim_test, ggplot2::aes(sim_test[, 1], sim_test[, x+3])) + ggplot2::geom_point(size = 0.2) + ggplot2::theme_void() + ggplot2::theme(axis.title.y = ggplot2::element_text()) + ggplot2::labs(x = NULL, y = x)})
+plots_2 <- lapply(1:9, function(x){ggplot2::ggplot(sim_test, ggplot2::aes(sim_test[, 2], sim_test[, x+3])) + ggplot2::geom_point(size = 0.2) + ggplot2::theme_void() + ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank())})
+plots_3 <- lapply(1:9, function(x){ggplot2::ggplot(sim_test, ggplot2::aes(sim_test[, 3], sim_test[, x+3])) + ggplot2::geom_point(size = 0.2) + ggplot2::theme_void() + ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank())})
+
+plots <- c(plots_1, plots_2, plots_3)
+plots[[9]] <- plots[[9]] + ggplot2::theme(axis.title.x = ggplot2::element_text()) + ggplot2::labs(x = "A")
+plots[[18]] <- plots[[18]] + ggplot2::theme(axis.title.x = ggplot2::element_text()) + ggplot2::labs(x = "B")
+plots[[27]] <- plots[[27]] + ggplot2::theme(axis.title.x = ggplot2::element_text()) + ggplot2::labs(x = "C")
+
+cowplot::plot_grid(plotlist = plots, nrow = 9, byrow = FALSE, label_x = c(1, 2, 3))
+```

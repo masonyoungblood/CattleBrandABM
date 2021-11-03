@@ -549,17 +549,13 @@ ABM collects the following summary statistics at the end of each year:
         3.  Shannon’s diversity index
         4.  Simpson’s diversity index
     -   Spatial diversity:
-        1.  Jaccard index of beta diversity (zip codes)
-        2.  Morisita-Horn index of beta diversity (zip codes)
-        3.  Jaccard index of beta diversity (counties)
-        4.  Morisita-Horn index of beta diversity (counties)
+        5.  Jaccard index of beta diversity (zip codes)
+        6.  Morisita-Horn index of beta diversity (zip codes)
+        7.  Jaccard index of beta diversity (counties)
+        8.  Morisita-Horn index of beta diversity (counties)
 -   For brands:
     -   Overall diversity:
-        1.  Proportion of brands that are the most common type
-        2.  Proportion of brands that are the most rare type
-        3.  Shannon’s diversity index
-        4.  Simpson’s diversity index
-        5.  Mean Levenshtein distance (from random subset)
+        9.  Mean Levenshtein distance (from random subset)
 
 For all diversity metrics we calculated their Hill number counterparts,
 because they are [measured on the same
@@ -576,11 +572,13 @@ the
 [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100)
 beta diversity indices to sampling error. We calculated beta diversity
 at both the zip code and county-level to assess spatial diversity at two
-different resolutions. Spatial diversity indices were not calculated at
-the brand level, since duplicated brands are uncommon at the level of
-both zip codes and counties. The mean Levenshtein distance (a.k.a. edit
-distance), or the [minimum number of insertions, deletions, and
-substitions required to convert one sequence to
+different resolutions. Diversity indices were not calculated at the
+level of brands, since duplicated brands in the model are not actually
+the same type (i.e. duplicates in the model and data correspond to
+slight variations of the same set of components that are only coded as
+the same). The mean Levenshtein distance (a.k.a. edit distance), or the
+[minimum number of insertions, deletions, and substitions required to
+convert one sequence to
 another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html),
 was calculated from a random subset of brands specified by the
 `edit_dist_prop` argument of the ABM function.
@@ -641,6 +639,8 @@ component is rotatable (or includes at least one comma).
 components <- data.table::data.table(components = components, rotatable = rotation$rot)
 components$rotatable[which(components$rotatable == "NA")] <- NA
 components$rotatable <- sapply(1:nrow(components), function(x){as.numeric(components$rotatable[[x]])})
+
+#EXPORT THIS, INCLUDING WHICH COMPONENTS WERE COMPRESSED INTO WHICH COMPONENTS
 ```
 
 Eventually we can use the code below to set the limits of our prior for
@@ -677,7 +677,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 7.513771 secs
+    ## Time difference of 7.120045 secs
 
 ``` r
 #print output
@@ -685,17 +685,13 @@ components_only
 ```
 
     ##      comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.1274301 0.001013619     48.45207     27.79170    0.2178289   0.3155386
-    ## 2015 0.1233935 0.001300796     50.89246     29.19378    0.2247323   0.3215454
-    ## 2016 0.1191417 0.001430429     53.43501     30.75974    0.2329517   0.3332817
-    ##      comp_jac_county comp_mh_county  brand_most  brand_least brand_shannon
-    ## 2014       0.6187806      0.8374054 0.003925595 6.039377e-05      3160.819
-    ## 2015       0.6427236      0.8422623 0.003817256 6.059137e-05      3330.829
-    ## 2016       0.6631064      0.8286799 0.003708207 6.079027e-05      3499.007
-    ##      brand_simpson brand_edit
-    ## 2014      1629.369   2.546142
-    ## 2015      1708.753   2.558299
-    ## 2016      1782.320   2.561750
+    ## 2014 0.1265379 0.001064216     48.86151     27.97237    0.2195765   0.3071942
+    ## 2015 0.1221836 0.001245977     51.49426     29.48194    0.2262549   0.3080175
+    ## 2016 0.1186286 0.001455566     53.88632     30.92602    0.2333725   0.3137637
+    ##      comp_jac_county comp_mh_county brand_edit
+    ## 2014       0.6272363      0.8157211   2.510586
+    ## 2015       0.6500223      0.8082031   2.566389
+    ## 2016       0.6699599      0.8159824   2.575814
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -707,7 +703,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 11.29214 secs
+    ## Time difference of 11.21427 secs
 
 ``` r
 #print output
@@ -715,20 +711,16 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.06764201 2.598618e-05     115.0994     60.36204   0.05510213   0.1831832
-    ## 2015 0.06547665 2.598280e-05     121.0325     63.13547   0.05504943   0.1862863
-    ## 2016 0.06291339 2.604031e-05     127.2692     66.41657   0.05497135   0.1881733
-    ##      comp_jac_county comp_mh_county   brand_most  brand_least brand_shannon
-    ## 2014       0.2042131      0.6948251 0.0010266940 6.039377e-05      7526.388
-    ## 2015       0.2056450      0.7100687 0.0010906447 6.059137e-05      7724.663
-    ## 2016       0.2062532      0.7156524 0.0009726444 6.079027e-05      7876.682
-    ##      brand_simpson brand_edit
-    ## 2014      5412.765   2.605794
-    ## 2015      5568.362   2.601328
-    ## 2016      5677.055   2.615886
+    ## 2014 0.06844116 2.599361e-05     114.2360     59.73152   0.05488534   0.1741693
+    ## 2015 0.06588150 2.599901e-05     120.4872     62.65737   0.05554621   0.1818078
+    ## 2016 0.06356638 2.600916e-05     126.2743     65.64627   0.05560733   0.1898941
+    ##      comp_jac_county comp_mh_county brand_edit
+    ## 2014       0.2051883      0.7462740   2.592011
+    ## 2015       0.2085942      0.7459883   2.620850
+    ## 2016       0.2091634      0.7380808   2.665728
 
 The output of each model is a matrix with a row for each of the three
-sampling years, and a column for each of the 13 summary statistics
+sampling years, and a column for each of the nine summary statistics
 collected in that year. After some profiling and optimization (using
 `profvis`) the runtime for the agent-based model is just barely fast
 enough for generative inference. I tried to further optimize the way
@@ -736,3 +728,36 @@ that unique brands and component/angle combinations are handled by
 leaving them as matrices of integers instead of converting them into
 concatenated strings, but surprisingly the string method is
 significantly faster.
+
+Now let’s ensure that variation in our parameter values actually leads
+to variation in our summary statistics. To do this, we’ll run 1000
+simulations of the model assuming the same radii as above but with
+varying parameter values for `complexity`, `copy_strength`, and
+`dist_strength`. By plotting each dynamic parameter value against the
+summary statistics that they generate, we can insure that variation in
+one corresponds to variation in the other.
+
+``` r
+#set number of simulations and cores
+n_sims <- 1000
+n_cores <- parallel::detectCores()-1
+
+#get uniform priors for three main dynamic parameters
+priors <- data.frame(complexity = runif(n_sims, min = 0.5, max = 15), 
+                     copy_strength = runif(n_sims, min = 0, max = 5),
+                     dist_strength = runif(n_sims, min = 0, max = 5))
+
+#run simulations
+sum_stats <- parallel::mclapply(1:n_sims, function(x){cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
+                                                                     init_year = 2008, sampling_years = c(2016), n_new, n_old,
+                                                                     rot_prob, complexity = priors$complexity[x], copy_radius = 200,
+                                                                     copy_strength = priors$copy_strength[x], dist_radius = 100,
+                                                                     dist_strength = priors$dist_strength[x], angles = FALSE, edit_dist_prop = 0.1)}, mc.cores = n_cores)
+
+#simplify and save output
+sum_stats <- do.call("rbind", sum_stats)
+sim_test <- cbind(priors, sum_stats)
+save(sim_test, file = "sim_test.RData")
+```
+
+<img src="README_files/figure-gfm/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />

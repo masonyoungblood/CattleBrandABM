@@ -77,8 +77,8 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
   t_steps <- max(sampling_years) - init_year
   
   #create empty output matrix to store the summary statistics (columns) from each sampling year (rows)
-  if(edit_dist_prop > 0){output <- matrix(NA, nrow = length(sampling_years), ncol = 13)}
-  if(edit_dist_prop == 0){output <- matrix(NA, nrow = length(sampling_years), ncol = 12)}
+  if(edit_dist_prop > 0){output <- matrix(NA, nrow = length(sampling_years), ncol = 9)}
+  if(edit_dist_prop == 0){output <- matrix(NA, nrow = length(sampling_years), ncol = 8)}
   
   running_brands <- init_brands
   
@@ -108,11 +108,6 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
         #get component frequencies
         comp_freqs <- as.numeric(sort(Rfast::Table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), decreasing = TRUE))
         
-        #get brand frequencies (for now just combining them as a string)
-        all_brands <- sapply(1:nrow(running_brands), function(x){paste(running_brands[x, 1:4], collapse = " ")})
-        unique_brands <- unique(all_brands)
-        brand_freqs <- as.numeric(sort(Rfast::Table(all_brands), decreasing = TRUE))
-        
         #construct components by zip codes matrix
         comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
           (as.numeric(Rfast::Table(c(0:nrow(components), running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4])))-1)[-1]
@@ -139,7 +134,7 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
         }
 
         #remove temporary variables
-        rm(list = c("all_brands", "unique_brands", "unique_counties"))
+        rm(list = c("unique_counties"))
       }
       
       #if angles are considered, then generate component frequencies with them
@@ -157,11 +152,6 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
         
         #get component frequencies (where rotated components are treated as unique)
         comp_freqs <- as.numeric(sort(Rfast::Table(comp_angle_combos), decreasing = TRUE))
-        
-        #get brand frequencies (for now just combining them as a string)
-        all_brands <- sapply(1:nrow(running_brands), function(x){paste(running_brands[x, 1:8], collapse = " ")})
-        unique_brands <- unique(all_brands)
-        brand_freqs <- as.numeric(sort(Rfast::Table(all_brands), decreasing = TRUE))
         
         #construct components by zip codes matrix
         comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
@@ -189,49 +179,46 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
         }
         
         #remove temporary variables
-        rm(list = c("comp_angle_combos", "unique_comp_angle_combos", "all_brands", "unique_brands", "unique_counties"))
+        rm(list = c("comp_angle_combos", "unique_comp_angle_combos", "unique_counties"))
       }
       
-      #calculate component summary statistics
-      comp_sum_stats <- c(max(comp_freqs)/sum(comp_freqs), #proportion of the most common component
-                          min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
-                          hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
-                          hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
-                          hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
-                          hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
-                          hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
-                          hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity) #morisita-horn index (counties)
-      
-      #calculate brand summary statistics
+      #calculate summary statistics
       if(edit_dist_prop > 0){
-        brand_sum_stats <- c(max(brand_freqs)/sum(brand_freqs), #proportion of the most common brand
-                             min(brand_freqs)/sum(brand_freqs), #proportion of the least common brand
-                             hillR::hill_taxa(brand_freqs, q = 1), #shannon's diversity index
-                             hillR::hill_taxa(brand_freqs, q = 2), #simpson's diversity index
-                             mean(edit_dist_mat[upper.tri(edit_dist_mat)])) #mean edit distance
-
+        sum_stats <- c(max(comp_freqs)/sum(comp_freqs), #proportion of the most common component
+                       min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
+                       hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
+                       hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
+                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
+                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
+                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
+                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity, #morisita-horn index (counties)
+                       mean(edit_dist_mat[upper.tri(edit_dist_mat)])) #mean edit distance
       }
       if(edit_dist_prop == 0){
-        brand_sum_stats <- c(max(brand_freqs)/sum(brand_freqs), #proportion of the most common brand
-                             min(brand_freqs)/sum(brand_freqs), #proportion of the least common brand
-                             hillR::hill_taxa(brand_freqs, q = 1), #shannon's diversity index
-                             hillR::hill_taxa(brand_freqs, q = 2)) #simpson's diversity index
+        sum_stats <- c(max(comp_freqs)/sum(comp_freqs), #proportion of the most common component
+                       min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
+                       hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
+                       hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
+                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
+                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
+                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
+                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity) #morisita-horn index (counties)
       }
       
       #store summary statistics in the output matrix
-      output[match(i, sampling_years - init_year), ] <- c(comp_sum_stats, brand_sum_stats)
+      output[match(i, sampling_years - init_year), ] <- sum_stats
       
       #remove temporary objects
-      if(edit_dist_prop > 0){rm(list = c("comp_freqs", "brand_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "comp_sum_stats", "brand_sum_stats", "edit_dist_mat"))}
-      if(edit_dist_prop == 0){rm(list = c("comp_freqs", "brand_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "comp_sum_stats", "brand_sum_stats"))}
+      if(edit_dist_prop > 0){rm(list = c("comp_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "sum_stats", "edit_dist_mat"))}
+      if(edit_dist_prop == 0){rm(list = c("comp_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "sum_stats"))}
     }
     
     #remove temporary objects
     rm(list = c("new_zips", "new_brands"))
   }
   
-  if(edit_dist_prop > 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county", "brand_most", "brand_least", "brand_shannon", "brand_simpson", "brand_edit")}
-  if(edit_dist_prop == 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county", "brand_most", "brand_least", "brand_shannon", "brand_simpson")}
+  if(edit_dist_prop > 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county", "brand_edit")}
+  if(edit_dist_prop == 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county")}
   rownames(output) <- sampling_years
   
   return(output)
