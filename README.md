@@ -549,13 +549,13 @@ ABM collects the following summary statistics at the end of each year:
         3.  Shannon’s diversity index
         4.  Simpson’s diversity index
     -   Spatial diversity:
-        5.  Jaccard index of beta diversity (zip codes)
-        6.  Morisita-Horn index of beta diversity (zip codes)
-        7.  Jaccard index of beta diversity (counties)
-        8.  Morisita-Horn index of beta diversity (counties)
+        1.  Jaccard index of beta diversity (zip codes)
+        2.  Morisita-Horn index of beta diversity (zip codes)
+        3.  Jaccard index of beta diversity (counties)
+        4.  Morisita-Horn index of beta diversity (counties)
 -   For brands:
     -   Overall diversity:
-        9.  Mean Levenshtein distance (from random subset)
+        1.  Mean Levenshtein distance (from random subset)
 
 For all diversity metrics we calculated their Hill number counterparts,
 because they are [measured on the same
@@ -677,7 +677,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 7.120045 secs
+    ## Time difference of 7.079565 secs
 
 ``` r
 #print output
@@ -685,13 +685,13 @@ components_only
 ```
 
     ##      comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.1265379 0.001064216     48.86151     27.97237    0.2195765   0.3071942
-    ## 2015 0.1221836 0.001245977     51.49426     29.48194    0.2262549   0.3080175
-    ## 2016 0.1186286 0.001455566     53.88632     30.92602    0.2333725   0.3137637
+    ## 2014 0.1271439 0.001219544     48.90010     27.98757    0.2190987   0.3149678
+    ## 2015 0.1232113 0.001347988     51.55374     29.44841    0.2276377   0.3192182
+    ## 2016 0.1192142 0.001503136     54.23183     31.05511    0.2356033   0.3224505
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2014       0.6272363      0.8157211   2.510586
-    ## 2015       0.6500223      0.8082031   2.566389
-    ## 2016       0.6699599      0.8159824   2.575814
+    ## 2014       0.6296395      0.8400873   2.526767
+    ## 2015       0.6535826      0.8344304   2.598449
+    ## 2016       0.6729862      0.8297132   2.587773
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -703,7 +703,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 11.21427 secs
+    ## Time difference of 11.34226 secs
 
 ``` r
 #print output
@@ -711,13 +711,13 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.06844116 2.599361e-05     114.2360     59.73152   0.05488534   0.1741693
-    ## 2015 0.06588150 2.599901e-05     120.4872     62.65737   0.05554621   0.1818078
-    ## 2016 0.06356638 2.600916e-05     126.2743     65.64627   0.05560733   0.1898941
+    ## 2014 0.06982563 2.606407e-05     114.8226     59.10205   0.05387934   0.1800680
+    ## 2015 0.06724574 2.608446e-05     120.8924     62.06673   0.05427838   0.1930061
+    ## 2016 0.06498525 2.610898e-05     126.8637     65.09952   0.05442244   0.1950089
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2014       0.2051883      0.7462740   2.592011
-    ## 2015       0.2085942      0.7459883   2.620850
-    ## 2016       0.2091634      0.7380808   2.665728
+    ## 2014       0.2024465      0.7108611   2.577708
+    ## 2015       0.2048734      0.7266757   2.620721
+    ## 2016       0.2069448      0.7195423   2.609951
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the nine summary statistics
