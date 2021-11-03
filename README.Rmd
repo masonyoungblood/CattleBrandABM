@@ -639,6 +639,8 @@ sim_test <- cbind(priors, sum_stats)
 save(sim_test, file = "sim_test.RData")
 ```
 
+In this plot, each row corresponds to the nine summary statistics and each column corresponds to the three dynamic parameters in the ABM (A: complexity, B: copying strength, C: distinctiveness strength).
+
 ```{r echo=FALSE, fig.align="center", fig.height=10, fig.width=3.5}
 load("sim_test.RData")
 
