@@ -27,16 +27,16 @@ brands[1:10, ]
 ```
 
     ##                    brand location page year
-    ## 1  #,,, ,,,, ,,,, ,,,, 1    67563    1 2008
-    ## 2  #,,, ,,,, ,,,, ,,1, 1    67835    1 2008
-    ## 3  #,,, ,,,, ,,,, ,,1, 3    67880    1 2008
-    ## 4  $,,, ,,,, ,,,, ,,1, 1    67104    1 2008
-    ## 5  $,,, ,,,, ,,,, ,,1, 3    66428    1 2008
-    ## 6  $,,, ,,,, ,,,, ,,1, 5    67869    1 2008
-    ## 7  $,,, ,,,, ,,,, ,,1, 6    67664    1 2008
-    ## 8  $,,, -,,, ,,,, ,,,, 1    67530    1 2008
-    ## 9  $,2, ,,,, ,,,, ,,,, 1    67659    1 2008
-    ## 10 %,,, ,,,, ,,,, ,,,, 2    67529    1 2008
+    ## 1  #,,, ,,,, ,,,, ,,,, 1    67563    1 1990
+    ## 2  #,,, ,,,, ,,,, ,,1, 1    67835    1 1990
+    ## 3  #,,, ,,,, ,,,, ,,1, 2    66092    1 1990
+    ## 4  $,,, $,,, ,,,, ,,,, 1    03060    1 1990
+    ## 5  $,,, ,,,, ,,,, ,,,, 1    66617    1 1990
+    ## 6  $,,, ,,,, ,,,, ,,,, 2    67576    1 1990
+    ## 7  $,,, ,,,, ,,,, ,,,, 3    67333    1 1990
+    ## 8  $,,, ,,,, ,,,, ,,1, 1    67104    1 1990
+    ## 9  $,,, ,,,, ,,,, ,,1, 2    67347    1 1990
+    ## 10 $,,, ,,,, ,,,, ,,1, 3    66428    1 1990
 
 Each three digit code corresponds to a component in the brand, and the
 final single digit corresponds to the location of the brand on the
@@ -402,8 +402,7 @@ components (with zeroes for empty component codes) and the last four
 correspond to the angles of rotation (with zeroes for unrotated
 components). For this, we will just replace each component code with a
 node denoting it’s position in the `components` vector, and assign a
-zero to empty positions. We will also append zip codes and years. All
-letters will be collapsed into a single component.
+zero to empty positions. We will also append zip codes and years.
 
 Once brands are converted let’s go ahead and save the object so we don’t
 have to execute all of this code every time.
@@ -459,16 +458,73 @@ brands[1:10,]
 ```
 
     ##       [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]  [,9] [,10]
-    ##  [1,]   27    0    0    0    0    0    0    0 67563  2008
-    ##  [2,]   27    0    0    0    0    0    0    0 67835  2008
-    ##  [3,]   27    0    0    0    0    0    0    0 67880  2008
-    ##  [4,]   28    0    0    0    0    0    0    0 67104  2008
-    ##  [5,]   28    0    0    0    0    0    0    0 66428  2008
-    ##  [6,]   28    0    0    0    0    0    0    0 67869  2008
-    ##  [7,]   28    0    0    0    0    0    0    0 67664  2008
-    ##  [8,]   28    9    0    0    0    5    0    0 67530  2008
-    ##  [9,]   28    0    0    0    1    0    0    0 67659  2008
-    ## [10,]   29    0    0    0    0    0    0    0 67529  2008
+    ##  [1,]   27    0    0    0    0    0    0    0 67563  1990
+    ##  [2,]   27    0    0    0    0    0    0    0 67835  1990
+    ##  [3,]   27    0    0    0    0    0    0    0 66092  1990
+    ##  [4,]   28    0    0    0    0    0    0    0 66617  1990
+    ##  [5,]   28    0    0    0    0    0    0    0 67576  1990
+    ##  [6,]   28    0    0    0    0    0    0    0 67333  1990
+    ##  [7,]   28    0    0    0    0    0    0    0 67104  1990
+    ##  [8,]   28    0    0    0    0    0    0    0 67347  1990
+    ##  [9,]   28    0    0    0    0    0    0    0 66428  1990
+    ## [10,]   28    0    0    0    0    0    0    0 67869  1990
+
+The total number of brands in the dataset, after removing duplicates
+within zip codes, is 87,532. Once we remove *all* duplicates we end up
+with 41,925 unique brands in the dataset. For unique brands with two
+components, 6,215 of them appear in 1990 and 19,525 of them only appear
+in 2008-2016. For unique brands with three components, 3,125 of them
+appear in 1990 and 11,192 of them only appear in 2008-2016. Among the
+unique brands, only 6.86% of component types are singletons (i.e. only
+appear once). Here is the breakdown of the unique brands in terms of the
+four geographic quadrants described in the preregistration document,
+separately for two- and three-component brands:
+
+    ## 
+    ##   NE   NW   SE   SW 
+    ## 6047 5623 7161 6909
+
+    ## 
+    ##   NE   NW   SE   SW 
+    ## 3307 2478 4467 4065
+
+In short, we have ample sample size to conduct all of the analyses
+proposed in the preregistration document.
+
+Finally, if a large number of brands are registered in cities, where
+ranches are unlikely to be located, then it could be indicative of
+deeper data quality issues. The four [most populous counties in
+Kansas](http://www.usa.com/rank/kansas-state--population-density--county-rank.htm)
+are Johnson, Wyandotte, Sedgwick, and Shawnee. Collectively, these
+counties include the three biggest metropolitan areas: Kansas City,
+Topeka, and Wichita.
+
+``` r
+#collect zip codes for top four counties
+johnson <- zipcodeR::search_county("Johnson", "KS")
+wyandotte <- zipcodeR::search_county("Wyandotte", "KS")
+sedgwick <- zipcodeR::search_county("Sedgwick", "KS")
+shawnee <- zipcodeR::search_county("Shawnee", "KS")
+
+#compile p. o. box and normal zips
+po_box_zips <- c(johnson$zipcode[which(johnson$zipcode_type == "PO Box")],
+                 wyandotte$zipcode[which(wyandotte$zipcode_type == "PO Box")],
+                 sedgwick$zipcode[which(sedgwick$zipcode_type == "PO Box")],
+                 shawnee$zipcode[which(shawnee$zipcode_type == "PO Box")])
+normal_zips <- c(johnson$zipcode[which(johnson$zipcode_type == "Standard")],
+                 wyandotte$zipcode[which(wyandotte$zipcode_type == "Standard")],
+                 sedgwick$zipcode[which(sedgwick$zipcode_type == "Standard")],
+                 shawnee$zipcode[which(shawnee$zipcode_type == "Standard")])
+
+#get proportion of brands that are in metropolitan areas, and in p. o. boxes
+prop_metro <- length(which(brands[, 9] %in% c(po_box_zips, normal_zips)))/nrow(brands)
+prop_po_box <- length(which(brands[, 9] %in% po_box_zips))/nrow(brands)
+```
+
+Luckily, it appears that only 3.43% of brands are registered in
+metropolitan areas, and only 0.121% are registered to metropolitan P. O.
+Boxes. This suggests that brand registration in cities is not a
+significant issue.
 
 ## Description of the ABM
 
@@ -507,7 +563,7 @@ then only the frequencies of those particular angles are considered.
 
 The map below shows an example of copying and distinctiveness radii (200
 km and 100 km, respectively) around a target zip code, shown by the
-black triangle. In this example, components and angles within the larger
+green triangle. In this example, components and angles within the larger
 copying radius (blue) would be more likely to be appear in the target
 zip code, whereas brands within the smaller distinctiveness radius (red)
 would be less likely to be appear. Here we plot the geographic centroids
@@ -515,7 +571,7 @@ of each zip code rather than their boundaries, as the only shapefiles
 available at the zip code level are for the US Census’ “zip code
 tabulation areas”, which do not include all locations in the dataset.
 
-<img src="README_files/figure-gfm/unnamed-chunk-22-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-25-1.png" width="75%" style="display: block; margin: auto;" />
 
 To simulate simplicity and complexity, the number of components in each
 new brand is drawn from a Poisson distribution where *λ* is the
@@ -525,7 +581,7 @@ four components when *λ* is 0.5, 3, and 15. Note that the normalization
 here is only for plotting purposes - We will using the raw output of
 `dpois` as the `prob` argument of base R’s `sample` function.
 
-<img src="README_files/figure-gfm/unnamed-chunk-23-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-26-1.png" width="75%" style="display: block; margin: auto;" />
 
 At the beginning of each year in the ABM a set of `n_new` brands is
 created, where `n_new` is the average number of new brands that appear
@@ -555,9 +611,9 @@ ABM collects the following summary statistics at the end of each year:
         4.  Morisita-Horn index of beta diversity (counties)
 -   For brands:
     -   Overall diversity:
-        1.  Mean Levenshtein distance (from random subset)
+        1.  Mean Levenshtein distance (from random 10%)
 
-For all diversity metrics we calculated their Hill number counterparts,
+For all diversity metrics calculate their Hill number counterparts,
 because they are [measured on the same
 scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and
 [better account for relative
@@ -570,18 +626,18 @@ The Morisita-Horn index is a commonly used
 beta diversity index, whereas the Jaccard index is the most robust of
 the
 [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100)
-beta diversity indices to sampling error. We calculated beta diversity
-at both the zip code and county-level to assess spatial diversity at two
-different resolutions. Diversity indices were not calculated at the
-level of brands, since duplicated brands in the model are not actually
-the same type (i.e. duplicates in the model and data correspond to
-slight variations of the same set of components that are only coded as
-the same). The mean Levenshtein distance (a.k.a. edit distance), or the
+beta diversity indices to sampling error. We calculate beta diversity at
+both the zip code and county-level to assess spatial diversity at two
+different resolutions. Diversity indices are not calculated at the level
+of brands, since duplicated brands in the model are not actually the
+same type (i.e. duplicates in the model and data correspond to slight
+variations of the same set of components that are only coded as the
+same). The mean Levenshtein distance (a.k.a. edit distance), or the
 [minimum number of insertions, deletions, and substitions required to
 convert one sequence to
 another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html),
-was calculated from a random subset of brands specified by the
-`edit_dist_prop` argument of the ABM function.
+is calculated from a random 10% of brands (specified by the
+`edit_dist_prop` argument of the ABM function).
 
 The ABM parameters will be fit to the observed data using the random
 forest version of approximate Bayesian computation (ABC). Random forest
@@ -677,7 +733,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 7.070402 secs
+    ## Time difference of 7.395124 secs
 
 ``` r
 #print output
@@ -685,13 +741,13 @@ components_only
 ```
 
     ##      comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.1270833 0.001067708     48.87470     27.90924    0.2194838   0.3094007
-    ## 2015 0.1228331 0.001355543     51.53533     29.42031    0.2269817   0.3136859
-    ## 2016 0.1187559 0.001538221     54.14070     30.97014    0.2343248   0.3126131
+    ## 2014 0.1269351 0.001012987     48.94284     28.01984    0.2202671   0.3219715
+    ## 2015 0.1229251 0.001298870     51.46961     29.45627    0.2273482   0.3228382
+    ## 2016 0.1185736 0.001351562     54.10621     31.07197    0.2345609   0.3232431
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2014       0.6278594      0.8308700   2.517587
-    ## 2015       0.6523364      0.8282471   2.547669
-    ## 2016       0.6712061      0.8215223   2.583820
+    ## 2014       0.6218069      0.7986963   2.577755
+    ## 2015       0.6445038      0.8262858   2.515198
+    ## 2016       0.6635514      0.8198721   2.565617
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -703,7 +759,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 11.40968 secs
+    ## Time difference of 11.84744 secs
 
 ``` r
 #print output
@@ -711,13 +767,13 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2014 0.06893506 2.597403e-05     115.0385     59.48065   0.05359652   0.1815545
-    ## 2015 0.06616139 2.595582e-05     121.1329     62.52166   0.05388733   0.1843298
-    ## 2016 0.06381652 2.597335e-05     126.9784     65.45652   0.05443846   0.1942493
+    ## 2014 0.06980921 2.602879e-05     114.9162     59.32937   0.05414304   0.1807183
+    ## 2015 0.06751483 2.601728e-05     121.1954     62.34683   0.05444783   0.1869018
+    ## 2016 0.06530166 2.601660e-05     127.3585     65.40610   0.05506041   0.1869724
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2014       0.2001905      0.7548702   2.589767
-    ## 2015       0.2029134      0.7469645   2.650675
-    ## 2016       0.2055023      0.7418804   2.665939
+    ## 2014       0.2020096      0.7490633   2.545409
+    ## 2015       0.2042385      0.7418734   2.616900
+    ## 2016       0.2075715      0.7319431   2.664342
 
 The output of each model is a matrix with a row for each of the three
 sampling years, and a column for each of the nine summary statistics
@@ -764,4 +820,4 @@ In this plot, each row corresponds to the nine summary statistics and
 each column corresponds to the three dynamic parameters in the ABM (A:
 complexity, B: copying strength, C: distinctiveness strength).
 
-<img src="README_files/figure-gfm/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-34-1.png" style="display: block; margin: auto;" />

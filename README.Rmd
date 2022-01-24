@@ -388,7 +388,7 @@ brands <- brands[-which(duplicated(concat_brands))]
 rm(concat_brands)
 ```
 
-Now we need to turn our brand data into a numeric matrix so it is compatible with our ABM. In this matrix, brands will be stored as a vector of eight numbers, where the first four correspond to the components (with zeroes for empty component codes) and the last four correspond to the angles of rotation (with zeroes for unrotated components). For this, we will just replace each component code with a node denoting it's position in the `components` vector, and assign a zero to empty positions. We will also append zip codes and years. All letters will be collapsed into a single component.
+Now we need to turn our brand data into a numeric matrix so it is compatible with our ABM. In this matrix, brands will be stored as a vector of eight numbers, where the first four correspond to the components (with zeroes for empty component codes) and the last four correspond to the angles of rotation (with zeroes for unrotated components). For this, we will just replace each component code with a node denoting it's position in the `components` vector, and assign a zero to empty positions. We will also append zip codes and years.
 
 Once brands are converted let's go ahead and save the object so we don't have to execute all of this code every time.
 
@@ -446,6 +446,128 @@ Here's a sample of what this matrix looks like.
 brands[1:10,]
 ```
 
+```{r echo = FALSE}
+#create data table of counties
+counties <- tigris::list_counties("KS")
+counties <- data.table::data.table(county = counties$county, quadrant = rep(NA, nrow(counties)))
+
+#NW counties
+counties$quadrant[which(counties$county %in% c("Cheyenne", "Rawlins", "Decatur",
+                                               "Norton", "Phillips", "Smith",
+                                               "Sherman", "Thomas", "Sheridan",
+                                               "Graham", "Rooks", "Osborne",
+                                               "Wallace", "Logan", "Gove",
+                                               "Trego", "Ellis", "Russell"))] <- "NW"
+
+#SW counties
+counties$quadrant[which(counties$county %in% c("Greeley", "Wichita", "Scott",
+                                               "Lane", "Ness", "Rush", "Barton",
+                                               "Hamilton", "Kearny", "Finney",
+                                               "Hodgeman", "Pawnee", "Stafford",
+                                               "Stanton", "Grant", "Haskell",
+                                               "Gray", "Ford", "Edwards",
+                                               "Kiowa", "Pratt", "Morton",
+                                               "Stevens", "Seward", "Meade",
+                                               "Clark", "Comanche", "Barber"))] <- "SW"
+
+#NE counties
+counties$quadrant[which(counties$county %in% c("Jewell", "Republic",
+                                               "Washington", "Marshall",
+                                               "Nemaha", "Brown", "Doniphan",
+                                               "Mitchell", "Cloud", "Clay",
+                                               "Riley", "Pottawatomie", 
+                                               "Jackson", "Atchison",
+                                               "Jefferson", "Leavenworth",
+                                               "Wyandotte", "Lincoln", "Ottawa",
+                                               "Ellsworth", "Saline",
+                                               "Dickinson", "Geary", "Morris",
+                                               "Wabaunsee", "Shawnee", "Osage",
+                                               "Douglas", "Franklin", "Johnson",
+                                               "Miami"))] <- "NE"
+
+#SE counties
+counties$quadrant[which(counties$county %in% c("Rice", "McPherson", "Marion",
+                                               "Chase", "Lyon", "Coffey",
+                                               "Anderson", "Linn", "Reno",
+                                               "Harvey", "Kingman", "Sedgwick",
+                                               "Butler", "Greenwood", "Woodson",
+                                               "Allen", "Bourbon", "Elk",
+                                               "Wilson", "Neosho", "Crawford",
+                                               "Harper", "Sumner", "Cowley",
+                                               "Chautauqua", "Montgomery",
+                                               "Labette", "Cherokee"))] <- "SE"
+
+#add zip codes to data table
+data("zip_code_db", package = "zipcodeR")
+counties$zip <- lapply(1:nrow(counties), function(x){zipcodeR::search_county(counties$county[x], state_abb = "KS")$zipcode})
+
+#create a thesaurus of which zip codes are in which quadrants
+quad_inds <- c()
+quad_zips <- c()
+for(i in 1:nrow(counties)){
+  quad_inds <- c(quad_inds, rep(counties$quadrant[i], length(counties$zip[[i]])))
+  quad_zips <- c(quad_zips, counties$zip[[i]])
+}
+quad_thes <- data.frame(quadrant = quad_inds, zip = quad_zips)
+rm(list = c("quad_inds", "quad_zips"))
+
+#get unique brands, ignoring zip codes
+unique_brands <- brands[-which(duplicated(brands[, -9])), ]
+
+#get quadrant for each brand in the dataset
+brands_quadrants <- quad_thes$quadrant[match(unique_brands[, 9], quad_thes$zip)]
+
+#get number of components per brand
+n_components <- sapply(1:nrow(unique_brands), function(x){4 - length(which(unique_brands[x, 1:4] == 0))})
+
+#get number of old and young brands for each two- and three-component brand (removing duplicated means young brands don't appear in 1990)
+old_2 <- length(which(unique_brands[which(n_components == 2), 10] == 1990))
+old_3 <- length(which(unique_brands[which(n_components == 3), 10] == 1990))
+young_2 <- length(which(unique_brands[which(n_components == 2), 10] > 1990))
+young_3 <- length(which(unique_brands[which(n_components == 3), 10] > 1990))
+
+#what percent of component types are singletons
+all_components <- c(unique_brands[, 1:4])
+all_components <- all_components[-which(all_components == 0)]
+percent_singleton <- round((length(which(as.numeric(table(all_components)) == 1))/length(as.numeric(table(all_components))))*100, 2)
+```
+
+The total number of brands in the dataset, after removing duplicates within zip codes, is `r scales::comma(nrow(brands))`. Once we remove *all* duplicates we end up with `r scales::comma(nrow(unique_brands))` unique brands in the dataset. For unique brands with two components, `r scales::comma(old_2)` of them appear in 1990 and `r scales::comma(young_2)` of them only appear in 2008-2016. For unique brands with three components, `r scales::comma(old_3)` of them appear in 1990 and `r scales::comma(young_3)` of them only appear in 2008-2016. Among the unique brands, only `r percent_singleton`% of component types are singletons (i.e. only appear once). Here is the breakdown of the unique brands in terms of the four geographic quadrants described in the preregistration document, separately for two- and three-component brands:
+
+```{r echo = FALSE}
+#get quadrant for each two- and three-component brand
+table(brands_quadrants[which(n_components == 2)])
+table(brands_quadrants[which(n_components == 3)])
+```
+
+In short, we have ample sample size to conduct all of the analyses proposed in the preregistration document.
+
+Finally, if a large number of brands are registered in cities, where ranches are unlikely to be located, then it could be indicative of deeper data quality issues. The four [most populous counties in Kansas](http://www.usa.com/rank/kansas-state--population-density--county-rank.htm) are Johnson, Wyandotte, Sedgwick, and Shawnee. Collectively, these counties include the three biggest metropolitan areas: Kansas City, Topeka, and Wichita.
+
+```{r}
+#collect zip codes for top four counties
+johnson <- zipcodeR::search_county("Johnson", "KS")
+wyandotte <- zipcodeR::search_county("Wyandotte", "KS")
+sedgwick <- zipcodeR::search_county("Sedgwick", "KS")
+shawnee <- zipcodeR::search_county("Shawnee", "KS")
+
+#compile p. o. box and normal zips
+po_box_zips <- c(johnson$zipcode[which(johnson$zipcode_type == "PO Box")],
+                 wyandotte$zipcode[which(wyandotte$zipcode_type == "PO Box")],
+                 sedgwick$zipcode[which(sedgwick$zipcode_type == "PO Box")],
+                 shawnee$zipcode[which(shawnee$zipcode_type == "PO Box")])
+normal_zips <- c(johnson$zipcode[which(johnson$zipcode_type == "Standard")],
+                 wyandotte$zipcode[which(wyandotte$zipcode_type == "Standard")],
+                 sedgwick$zipcode[which(sedgwick$zipcode_type == "Standard")],
+                 shawnee$zipcode[which(shawnee$zipcode_type == "Standard")])
+
+#get proportion of brands that are in metropolitan areas, and in p. o. boxes
+prop_metro <- length(which(brands[, 9] %in% c(po_box_zips, normal_zips)))/nrow(brands)
+prop_po_box <- length(which(brands[, 9] %in% po_box_zips))/nrow(brands)
+```
+
+Luckily, it appears that only `r round(prop_metro*100, digits = 2)`% of brands are registered in metropolitan areas, and only `r round(prop_po_box*100, digits = 3)`% are registered to metropolitan P. O. Boxes. This suggests that brand registration in cities is not a significant issue.
+
 ## Description of the ABM
 
 The agent-based model simulates ranchers creating new brands every year based on the components (and optionally angles) present in the brands used by ranchers around them, as well as dual constraints of simplicity and complexity. For example, with the parameters in the ABM we can run a model where ranchers copy components at a large geographic scale while being as different as possible from their closest neighbors, and try to create brands that are complex enough that they aren't easily faked but simple enough that are easily legible.
@@ -457,9 +579,9 @@ When a new brand is created, the components and angles around it are sampled wit
 
 $C$ and $D$ control the strength of copying and distinctiveness in the probability of adopting components and angles, where zero is neutrality, one is proportional to their observed frequencies, and values greater than one increase their influence beyond their observed frequencies. When only a subset of angles are possible for a particular component then only the frequencies of those particular angles are considered.
 
-The map below shows an example of copying and distinctiveness radii (200 km and 100 km, respectively) around a target zip code, shown by the black triangle. In this example, components and angles within the larger copying radius (blue) would be more likely to be appear in the target zip code, whereas brands within the smaller distinctiveness radius (red) would be less likely to be appear. Here we plot the geographic centroids of each zip code rather than their boundaries, as the only shapefiles available at the zip code level are for the US Census' "zip code tabulation areas", which do not include all locations in the dataset.
+The map below shows an example of copying and distinctiveness radii (200 km and 100 km, respectively) around a target zip code, shown by the green triangle. In this example, components and angles within the larger copying radius (blue) would be more likely to be appear in the target zip code, whereas brands within the smaller distinctiveness radius (red) would be less likely to be appear. Here we plot the geographic centroids of each zip code rather than their boundaries, as the only shapefiles available at the zip code level are for the US Census' "zip code tabulation areas", which do not include all locations in the dataset.
 
-```{r echo=FALSE, fig.align="center"}
+```{r echo=FALSE, fig.align="center", dpi=300, out.width="75%", fig.width=5.5, fig.height=3}
 #get zip codes within 200 km and 100 km of target location
 copy_example <- names(which(zip_dists[, which(colnames(zip_dists) == 67427)] <= 200))
 dist_example <- names(which(zip_dists[, which(colnames(zip_dists) == 67427)] <= 100))
@@ -492,7 +614,7 @@ rm(list = c("copy_example", "dist_example", "kansas_map", "map_example"))
 
 To simulate simplicity and complexity, the number of components in each new brand is drawn from a Poisson distribution where $\lambda$ is the parameter of interest (henceforth complexity). Below is an example of the normalized probabilities of creating a brand with between one and four components when $\lambda$ is 0.5, 3, and 15. Note that the normalization here is only for plotting purposes - We will using the raw output of `dpois` as the `prob` argument of base R's `sample` function.
 
-```{r echo = FALSE, fig.align="center", fig.width=5, fig.height=3}
+```{r echo = FALSE, fig.align="center", dpi=300, out.width="75%", fig.width=5, fig.height=3}
 #create data frame for poisson example
 pois_example <- data.frame(n_comps = c(1, 2, 3, 4),
                            probs = c(BBmisc::normalize(dpois(c(1, 2, 3, 4), 0.5), "range"),
@@ -528,9 +650,9 @@ The ABM is initialized with the earliest year of observed data and runs through 
     4. Morisita-Horn index of beta diversity (counties)
 * For brands:
   - Overall diversity:
-    1. Mean Levenshtein distance (from random subset)
+    1. Mean Levenshtein distance (from random 10%)
 
-For all diversity metrics we calculated their Hill number counterparts, because they are [measured on the same scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and [better account for relative abundance](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-0133.1). Shannon's diversity index emphasizes more rare types whereas Simpson's diversity index emphasizes more common types. The Jaccard and Morisita-Horn indices were similarly chosen for their complementarity. The Morisita-Horn index is a commonly used [abundance-based](https://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2005.00489.x) beta diversity index, whereas the Jaccard index is the most robust of the [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100) beta diversity indices to sampling error. We calculated beta diversity at both the zip code and county-level to assess spatial diversity at two different resolutions. Diversity indices were not calculated at the level of brands, since duplicated brands in the model are not actually the same type (i.e. duplicates in the model and data correspond to slight variations of the same set of components that are only coded as the same). The mean Levenshtein distance (a.k.a. edit distance), or the [minimum number of insertions, deletions, and substitions required to convert one sequence to another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html), was calculated from a random subset of brands specified by the `edit_dist_prop` argument of the ABM function.
+For all diversity metrics calculate their Hill number counterparts, because they are [measured on the same scale](https://onlinelibrary.wiley.com/doi/10.1111/oik.07202) and [better account for relative abundance](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-0133.1). Shannon's diversity index emphasizes more rare types whereas Simpson's diversity index emphasizes more common types. The Jaccard and Morisita-Horn indices were similarly chosen for their complementarity. The Morisita-Horn index is a commonly used [abundance-based](https://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2005.00489.x) beta diversity index, whereas the Jaccard index is the most robust of the [incidence-based](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecs2.2100) beta diversity indices to sampling error. We calculate beta diversity at both the zip code and county-level to assess spatial diversity at two different resolutions. Diversity indices are not calculated at the level of brands, since duplicated brands in the model are not actually the same type (i.e. duplicates in the model and data correspond to slight variations of the same set of components that are only coded as the same). The mean Levenshtein distance (a.k.a. edit distance), or the [minimum number of insertions, deletions, and substitions required to convert one sequence to another](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/adist.html), is calculated from a random 10% of brands (specified by the `edit_dist_prop` argument of the ABM function).
 
 The ABM parameters will be fit to the observed data using the random forest version of approximate Bayesian computation (ABC). Random forest ABC is [robust to the number of summary statistics](https://academic.oup.com/bioinformatics/article/32/6/859/1744513) and even [ranks them according to their importance](https://academic.oup.com/bioinformatics/article/35/10/1720/5132692), which means that we will not have to [reduce the dimensionality](https://projecteuclid.org/journals/statistical-science/volume-28/issue-2/A-Comparative-Review-of-Dimension-Reduction-Methods-in-Approximate-Bayesian/10.1214/12-STS406.full) of our summary statistics prior to inference.
 
