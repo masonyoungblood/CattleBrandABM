@@ -154,7 +154,7 @@ write.csv(letters_check, file = "letters_check.csv")
 prop_correct <- mean(read.csv("letters_checked.csv")$initials)*100
 ```
 
-Weighting the US surname distribution so that it matches the racial composition of Kansas does not solve the issue, so we manually checked 200 random brands with letters in the 2016 brand book. In `r prop_correct`% of the random brands at least one of the letters corresponded to one or both of the first or last names of the owners or the ranch (with some letters modifying others, like A and L both appearing in a brand where the L is a "leg" on the right side of the A in a brand owned by the family Asmussen, and some characters combined to make a letter, like L and 7 combined into an S for Schneider). 
+Weighting the US surname distribution so that it matches the ethnic composition of Kansas does not solve the issue, so we manually checked 200 random brands with letters in the 2016 brand book. In `r prop_correct`% of the random brands at least one of the letters corresponded to one or both of the first or last names of the owners or the ranch (with some letters modifying others, like A and L both appearing in a brand where the L is a "leg" on the right side of the A in a brand owned by the family Asmussen, and some characters combined to make a letter, like L and 7 combined into an S for Schneider). 
 
 Since a significant number of letters in brands are not initials, some letters (e.g. I and O) are also used to code shapes, and different letters have different possible rotation angles, we chose to keep them as separate categories. Numbers were also included as separate categories. Some of the symbols in the brand book have variants that are distinguished using the third digit that is usually used for rotation (e.g. AR, BB, MI, TK, and TR). We collapsed each set of these symbols into single categories that can be rotated just like any other component.
 
@@ -361,7 +361,7 @@ load("location_data/all_zips.RData")
 load("location_data/zip_dists.RData")
 ```
 
-Now we need to remove brands that are duplicated within the same zip code. When this occurs it's usually one family or ranch that has registered a single brand multiple times for different locations on the animal.
+Now we need to remove brands that are duplicated within the same zip code and year. When this occurs it's usually one family or ranch that has registered a single brand multiple times for different locations on the animal. In our model, duplicated brand codes will correspond to variations of the same combination of symbols independently of the location on the animal.
 
 ```{r eval=FALSE}
 #get concatenated brands with duplicate codes
@@ -378,11 +378,11 @@ concat_brands <- sapply(1:nrow(brands), function(x){
   paste0(temp, collapse = "")
 })
 
-#build data frame to determine which rows are duplicated (accounting for zip code and year)
-concat_brands <- data.frame(brand = concat_brands, location = brands$location, year = brands$year)
+#build data table to determine which rows are duplicated (accounting for zip code and year)
+concat_brands <- data.table::data.table(brand = concat_brands, location = brands$location, year = brands$year)
 
 #remove duplicated rows from the main data table
-brands <- brands[-which(duplicated(concat_brands))]
+brands <- brands[-which(duplicated(concat_brands)),]
 
 #remove temporary object
 rm(concat_brands)
@@ -511,33 +511,40 @@ for(i in 1:nrow(counties)){
 quad_thes <- data.frame(quadrant = quad_inds, zip = quad_zips)
 rm(list = c("quad_inds", "quad_zips"))
 
-#get unique brands, ignoring zip codes
-unique_brands <- brands[-which(duplicated(brands[, -9])), ]
-
 #get quadrant for each brand in the dataset
-brands_quadrants <- quad_thes$quadrant[match(unique_brands[, 9], quad_thes$zip)]
+brands_quadrants <- quad_thes$quadrant[match(brands[, 9], quad_thes$zip)]
 
 #get number of components per brand
-n_components <- sapply(1:nrow(unique_brands), function(x){4 - length(which(unique_brands[x, 1:4] == 0))})
+n_components <- sapply(1:nrow(brands), function(x){4 - length(which(brands[x, 1:4] == 0))})
 
-#get number of old and young brands for each two- and three-component brand (removing duplicated means young brands don't appear in 1990)
-old_2 <- length(which(unique_brands[which(n_components == 2), 10] == 1990))
-old_3 <- length(which(unique_brands[which(n_components == 3), 10] == 1990))
-young_2 <- length(which(unique_brands[which(n_components == 2), 10] > 1990))
-young_3 <- length(which(unique_brands[which(n_components == 3), 10] > 1990))
+#get number of two- and three-component brand that are unique to 1990 (old) or unique to the later years (young)
+#first, for each unique brand code (discounting location), we need the years in which it appears
+concat_brands <- as.factor(sapply(1:nrow(brands), function(x){paste0(brands[x, 1:8], collapse = " ")}))
+unique_concat_brands <- levels(concat_brands)
+years_appear <- lapply(unique_concat_brands, function(x){unique(brands[which(concat_brands == x), 10])})
+
+#now, we can get which brands are either only old or only young
+which_old <- sapply(1:length(concat_brands), function(x){all(years_appear[[which(unique_concat_brands == concat_brands[x])]] == 1990)})
+which_young <- sapply(1:length(concat_brands), function(x){all(years_appear[[which(unique_concat_brands == concat_brands[x])]] != 1990)})
 
 #what percent of component types are singletons
-all_components <- c(unique_brands[, 1:4])
+all_components <- c(brands[, 1:4])
 all_components <- all_components[-which(all_components == 0)]
 percent_singleton <- round((length(which(as.numeric(table(all_components)) == 1))/length(as.numeric(table(all_components))))*100, 2)
 ```
 
-The total number of brands in the dataset, after removing duplicates within zip codes, is `r scales::comma(nrow(brands))`. Once we remove *all* duplicates we end up with `r scales::comma(nrow(unique_brands))` unique brands in the dataset. For unique brands with two components, `r scales::comma(old_2)` of them appear in 1990 and `r scales::comma(young_2)` of them only appear in 2008-2016. For unique brands with three components, `r scales::comma(old_3)` of them appear in 1990 and `r scales::comma(young_3)` of them only appear in 2008-2016. Among the unique brands, only `r percent_singleton`% of component types are singletons (i.e. only appear once). Here is the breakdown of the unique brands in terms of the four geographic quadrants described in the preregistration document, separately for two- and three-component brands:
+The total number of brands in the dataset, after removing duplicates within zip codes, is `r scales::comma(nrow(brands))`. For brands with two components, `r scales::comma(length(which(n_components == 2 & which_old)))` of them only appear in 1990 ("old") and `r scales::comma(length(which(n_components == 2 & which_young)))` of them only appear in 2008-2016 ("young"). For brands with three components, `r scales::comma(length(which(n_components == 3 & which_old)))` of them are old and `r scales::comma(length(which(n_components == 3 & which_young)))` of them are young. Only `r round((length(which(n_components == 4))/length(n_components))*100, 2)`% of brands have four components, and only `r percent_singleton`% of component types are singletons (i.e. only appear once). Here is a further breakdown of the brands in terms of the four geographic quadrants described in the preregistration document, for each combination of age and complexity:
 
 ```{r echo = FALSE}
-#get quadrant for each two- and three-component brand
-table(brands_quadrants[which(n_components == 2)])
-table(brands_quadrants[which(n_components == 3)])
+#construct and print table of sample sizes for each combination of age, complexity, and quadrant
+sample_table <- rbind(as.numeric(table(brands_quadrants[which(n_components == 2 & which_old)])),
+                      as.numeric(table(brands_quadrants[which(n_components == 3 & which_old)])),
+                      as.numeric(table(brands_quadrants[which(n_components == 2 & which_young)])),
+                      as.numeric(table(brands_quadrants[which(n_components == 3 & which_young)])))
+sample_table <- as.data.frame(sample_table)
+colnames(sample_table) <- c("NE", "NW", "SE", "SW")
+rownames(sample_table) <- c("2-comp old", "3-comp old", "2-comp young", "3-comp young")
+sample_table
 ```
 
 In short, we have ample sample size to conduct all of the analyses proposed in the preregistration document.
@@ -566,7 +573,7 @@ prop_metro <- length(which(brands[, 9] %in% c(po_box_zips, normal_zips)))/nrow(b
 prop_po_box <- length(which(brands[, 9] %in% po_box_zips))/nrow(brands)
 ```
 
-Luckily, it appears that only `r round(prop_metro*100, digits = 2)`% of brands are registered in metropolitan areas, and only `r round(prop_po_box*100, digits = 3)`% are registered to metropolitan P. O. Boxes. This suggests that brand registration in cities is not a significant issue.
+Luckily, it appears that only `r round(prop_metro*100, digits = 2)`% of brands are registered in metropolitan areas, and only `r round(prop_po_box*100, digits = 2)`% are registered to metropolitan P. O. Boxes. This suggests that brand registration in cities is not a significant issue.
 
 ## Description of the ABM
 
@@ -675,16 +682,19 @@ Now we can subset the brand data to (1) calculate the average number of new and 
 
 ```{r}
 #separate brands data by year
+brands_1990 <- data.table::data.table(brands[which(brands[, 10] == 1990), 1:9])
 brands_2008 <- data.table::data.table(brands[which(brands[, 10] == 2008), 1:9])
 brands_2014 <- data.table::data.table(brands[which(brands[, 10] == 2014), 1:9])
 brands_2015 <- data.table::data.table(brands[which(brands[, 10] == 2015), 1:9])
 brands_2016 <- data.table::data.table(brands[which(brands[, 10] == 2016), 1:9])
 
 #calculate average number of new brands that appear each year and old brands that disappear each year (fsetdiff gets rows of first that are not in second)
-n_new <- mean(c((nrow(data.table::fsetdiff(brands_2014, brands_2008))/6),
+n_new <- mean(c((nrow(data.table::fsetdiff(brands_2008, brands_1990))/18),
+                (nrow(data.table::fsetdiff(brands_2014, brands_2008))/6),
                 nrow(data.table::fsetdiff(brands_2015, brands_2014)),
                 nrow(data.table::fsetdiff(brands_2016, brands_2015))))
-n_old <- mean(c((nrow(data.table::fsetdiff(brands_2008, brands_2014))/6),
+n_old <- mean(c((nrow(data.table::fsetdiff(brands_1990, brands_2008))/18),
+                (nrow(data.table::fsetdiff(brands_2008, brands_2014))/6),
                 nrow(data.table::fsetdiff(brands_2014, brands_2015)),
                 nrow(data.table::fsetdiff(brands_2015, brands_2016))))
 ```
@@ -696,8 +706,6 @@ We also need to reshape components so it includes whether or not a component is 
 components <- data.table::data.table(components = components, rotatable = rotation$rot)
 components$rotatable[which(components$rotatable == "NA")] <- NA
 components$rotatable <- sapply(1:nrow(components), function(x){as.numeric(components$rotatable[[x]])})
-
-#EXPORT THIS, INCLUDING WHICH COMPONENTS WERE COMPRESSED INTO WHICH COMPONENTS
 ```
 
 Eventually we can use the code below to set the limits of our prior for the sizes of the two radii.
@@ -708,13 +716,13 @@ round(min(zip_dists[which(zip_dists != 0)]))
 round(max(zip_dists))
 ```
 
-Okay, now we are ready to do a test run of the ABM. We'll set the complexity ($\lambda$) to 3, the copying radius to 200 km, the distinctive radius to 100 km, and the strength of both copying and distinctiveness to 1. The model will be initialized with the data from 2008, and summary statistics will be collected for 2014, 2015, and 2016. We'll also run one model that ignores the angles of components, and one that takes it into account
+Okay, now we are ready to do a test run of the ABM. We'll set the complexity ($\lambda$) to 3, the copying radius to 200 km, the distinctive radius to 100 km, and the strength of both copying and distinctiveness to 1. The model will be initialized with the data from 1990, and summary statistics will be collected for 2008, 2014, 2015, and 2016. We'll also run one model that ignores the angles of components, and one that takes it into account
 
 ```{r}
 #test out the components-only ABM (and get runtime)
 start <- Sys.time()
-components_only <- cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
-                                  init_year = 2008, sampling_years = c(2014, 2015, 2016), n_new, n_old,
+components_only <- cattlebrandABM(init_brands = as.matrix(brands_1990), components, all_zips, zip_dists,
+                                  init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old,
                                   rot_prob, complexity = 3, copy_radius = 200, copy_strength = 1,
                                   dist_radius = 100, dist_strength = 1, angles = FALSE, edit_dist_prop = 0.1)
 Sys.time() - start
@@ -725,7 +733,7 @@ components_only
 #test out the components and angles ABM (and get runtime)
 start <- Sys.time()
 components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
-                                    init_year = 2008, sampling_years = c(2014, 2015, 2016), n_new, n_old, 
+                                    init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old, 
                                     rot_prob, complexity = 3, copy_radius = 200, copy_strength = 1, 
                                     dist_radius = 100, dist_strength = 1, angles = TRUE, edit_dist_prop = 0.1)
 Sys.time() - start
@@ -734,9 +742,9 @@ Sys.time() - start
 components_angles
 ```
 
-The output of each model is a matrix with a row for each of the three sampling years, and a column for each of the nine summary statistics collected in that year. After some profiling and optimization (using `profvis`) the runtime for the agent-based model is just barely fast enough for generative inference. I tried to further optimize the way that unique brands and component/angle combinations are handled by leaving them as matrices of integers instead of converting them into concatenated strings, but surprisingly the string method is significantly faster.
+The output of each model is a matrix with a row for each of the four sampling years, and a column for each of the nine summary statistics collected in that year. After some profiling and optimization (using `profvis`) the runtime for the agent-based model is just barely fast enough for generative inference. I tried to further optimize the way that unique brands and component/angle combinations are handled by leaving them as matrices of integers instead of converting them into concatenated strings, but surprisingly the string method is significantly faster.
 
-Now let's ensure that variation in our parameter values actually leads to variation in our summary statistics. To do this, we'll run 1000 simulations of the model assuming the same radii as above but with varying parameter values for `complexity`, `copy_strength`, and `dist_strength`. By plotting each dynamic parameter value against the summary statistics that they generate, we can insure that variation in one corresponds to variation in the other.
+Now let's ensure that variation in our parameter values actually leads to variation in our summary statistics. To do this, we'll run 1,000 simulations of the model assuming the same radii as above but with varying parameter values for `complexity`, `copy_strength`, and `dist_strength`. By plotting each dynamic parameter value against the summary statistics that they generate, we can insure that variation in one corresponds to variation in the other.
 
 ```{r eval=FALSE}
 #set number of simulations and cores
@@ -750,7 +758,7 @@ priors <- data.frame(complexity = runif(n_sims, min = 0.5, max = 15),
 
 #run simulations
 sum_stats <- parallel::mclapply(1:n_sims, function(x){cattlebrandABM(init_brands = as.matrix(brands_2008), components, all_zips, zip_dists,
-                                                                     init_year = 2008, sampling_years = c(2016), n_new, n_old,
+                                                                     init_year = 1990, sampling_years = c(2016), n_new, n_old,
                                                                      rot_prob, complexity = priors$complexity[x], copy_radius = 200,
                                                                      copy_strength = priors$copy_strength[x], dist_radius = 100,
                                                                      dist_strength = priors$dist_strength[x], angles = FALSE, edit_dist_prop = 0.1)}, mc.cores = n_cores)
