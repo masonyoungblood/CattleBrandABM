@@ -4,7 +4,7 @@ author: Mason Youngblood
 output: github_document
 ---
 
-A detailed description of the structure of the cattle brand data can be found on the [corresponding GitHub](https://github.com/masonyoungblood/cattle_brand_data).
+The associated preregistration document can be found on [OSF](https://osf.io/d4qv3/), and a detailed description of the structure of the cattle brand data can be found on the [corresponding GitHub](https://github.com/masonyoungblood/cattle_brand_data).
 
 ```{r echo=FALSE, fig.align="center", out.width="50%"}
 knitr::include_graphics("https://images.unsplash.com/photo-1590249351139-c6effec78d2a?ixid=MnwxMjA3fDB8MHxzZWFyY2h8MjV8fGJhYnklMjBjb3dzfGVufDB8fDB8fA%3D%3D&ixlib=rb-1.2.1&w=1000&q=80")

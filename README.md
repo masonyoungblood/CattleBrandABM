@@ -2,8 +2,9 @@ Agent-Based Model of Cattle Brands
 ================
 Mason Youngblood
 
-A detailed description of the structure of the cattle brand data can be
-found on the [corresponding
+The associated preregistration document can be found on
+[OSF](https://osf.io/d4qv3/), and a detailed description of the
+structure of the cattle brand data can be found on the [corresponding
 GitHub](https://github.com/masonyoungblood/cattle_brand_data).
 
 <img src="https://images.unsplash.com/photo-1590249351139-c6effec78d2a?ixid=MnwxMjA3fDB8MHxzZWFyY2h8MjV8fGJhYnklMjBjb3dzfGVufDB8fDB8fA%3D%3D&ixlib=rb-1.2.1&w=1000&q=80" width="50%" style="display: block; margin: auto;" />
@@ -733,7 +734,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_1990), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 23.24493 secs
+    ## Time difference of 23.51204 secs
 
 ``` r
 #print output
@@ -741,15 +742,15 @@ components_only
 ```
 
     ##       comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.09820768 0.002827685     65.98462     40.00909    0.3063715   0.3786883
-    ## 2014 0.08484781 0.003692927     74.58071     48.30082    0.3273130   0.3741008
-    ## 2015 0.08208150 0.003845462     76.02231     50.01580    0.3304529   0.3724728
-    ## 2016 0.07988239 0.003957933     77.27162     51.53872    0.3325422   0.3716157
+    ## 2008 0.09743835 0.002894639     66.54560     40.53447    0.3072368   0.3817316
+    ## 2014 0.08364815 0.003643679     75.44860     49.34347    0.3288582   0.3710294
+    ## 2015 0.08146067 0.003820225     76.76462     50.84122    0.3314296   0.3669273
+    ## 2016 0.07923497 0.003883846     78.04927     52.41185    0.3337289   0.3644130
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.7943925      0.8274049   2.608831
-    ## 2014       0.8278594      0.8054026   2.730226
-    ## 2015       0.8339119      0.8005737   2.721898
-    ## 2016       0.8356030      0.7966296   2.716801
+    ## 2008       0.7929684      0.8294175   2.618714
+    ## 2014       0.8267023      0.8026105   2.732275
+    ## 2015       0.8300846      0.7966828   2.718383
+    ## 2016       0.8334668      0.7923337   2.751734
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -761,7 +762,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 26.64531 secs
+    ## Time difference of 26.60413 secs
 
 ``` r
 #print output
@@ -769,15 +770,15 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.04440739 3.088135e-05     179.9646     100.9164   0.05513437   0.1848249
-    ## 2014 0.03560417 3.245594e-05     201.6766     121.8063   0.05538766   0.1763187
-    ## 2015 0.03425375 3.271609e-05     204.3047     125.1062   0.05531279   0.1745370
-    ## 2016 0.03323752 3.303928e-05     206.5426     127.7181   0.05514262   0.1738468
+    ## 2008 0.04390350 3.104915e-05     178.1385     100.2534   0.05550015   0.1815588
+    ## 2014 0.03402733 3.253090e-05     199.6833     120.8893   0.05537539   0.1804522
+    ## 2015 0.03247796 3.277292e-05     202.6392     124.2706   0.05497572   0.1799558
+    ## 2016 0.03101057 3.302510e-05     206.1169     127.9412   0.05496892   0.1776096
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.2188345      0.6458063   2.813861
-    ## 2014       0.2200931      0.5769859   2.854269
-    ## 2015       0.2201095      0.5643916   2.857064
-    ## 2016       0.2192110      0.5778471   2.878541
+    ## 2008       0.2185324      0.6626550   2.798389
+    ## 2014       0.2199343      0.6218298   2.802081
+    ## 2015       0.2183627      0.6118725   2.870381
+    ## 2016       0.2187541      0.6036818   2.842105
 
 The output of each model is a matrix with a row for each of the four
 sampling years, and a column for each of the nine summary statistics
