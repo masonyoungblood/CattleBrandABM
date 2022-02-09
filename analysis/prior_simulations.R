@@ -4,7 +4,6 @@ load("converted_brands.RData")
 load("components.RData")
 load("location_data/all_zips.RData")
 load("location_data/zip_dists.RData")
-source("cattlebrandABM.R")
 
 #random seed
 set.seed(12345)
