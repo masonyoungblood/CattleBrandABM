@@ -57,7 +57,7 @@ cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_stre
 }
 
 #run simulations without angles
-rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors", nodes = 4, cpus_per_node = 2)
+rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors", nodes = 4, cpus_per_node = 2, libPaths = "/data/users/youngblood/r_library")
 
 #rewrap cattlebrandABM for slurm with angles this time
 cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_strength, dist_strength){
@@ -73,6 +73,7 @@ cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_stre
 }
 
 #run simulations without angles
-rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles", nodes = 4, cpus_per_node = 2)
+rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles", nodes = 4, cpus_per_node = 2, libPaths = "/data/users/youngblood/r_library")
+
 
 
