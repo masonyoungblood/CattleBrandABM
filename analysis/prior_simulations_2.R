@@ -30,7 +30,7 @@ n_old <- mean(c((nrow(data.table::fsetdiff(brands_1990, brands_2008))/18),
                 nrow(data.table::fsetdiff(brands_2015, brands_2016))))
 
 #number of simulations
-n_sim <- 100
+n_sim <- 40
 
 #get minimum and maximum distances in data
 min_dist <- ceiling(min(zip_dists[which(zip_dists != 0)]))
@@ -57,8 +57,16 @@ cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_stre
 pkgs <- unique(getParseData(parse("cattlebrandABM.R"))$text[getParseData(parse("cattlebrandABM.R"))$token == "SYMBOL_PACKAGE"])
 
 #run simulations without angles
-rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors", nodes = 4, cpus_per_node = 10,
-                    pkgs = pkgs, global_objects = objects())
+slurm_a <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors",
+                               nodes = 4, cpus_per_node = 10, pkgs = pkgs, global_objects = objects())
+
+#get output and clean files
+sum_stats_a <- rslurm::get_slurm_out(slurm_a)
+rslurm::cleanup_files(slurm_a)
+
+#save output
+prior_simulations <- list(priors = priors, sum_stats = sum_stats_a)
+save(prior_simulations, file = "prior_simulations.RData")
 
 #rewrap cattlebrandABM for slurm with angles this time
 cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_strength, dist_strength){
@@ -74,8 +82,15 @@ cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_stre
 }
 
 #run simulations without angles
-rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles", nodes = 4, cpus_per_node = 10,
-                    pkgs = pkgs, global_objects = objects())
+slurm_b <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles",
+                               nodes = 4, cpus_per_node = 10, pkgs = pkgs, global_objects = objects())
 
+#get output and clean files
+sum_stats_b <- rslurm::get_slurm_out(slurm_b)
+rslurm::cleanup_files(slurm_b)
+
+#save output
+prior_simulations_angles <- list(priors = priors, sum_stats = sum_stats_b)
+save(prior_simulations_angles, file = "prior_simulations_angles.RData")
 
 
