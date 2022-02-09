@@ -30,7 +30,7 @@ n_old <- mean(c((nrow(data.table::fsetdiff(brands_1990, brands_2008))/18),
                 nrow(data.table::fsetdiff(brands_2015, brands_2016))))
 
 #number of simulations
-n_sim <- 100
+n_sim <- 40
 
 #get minimum and maximum distances in data
 min_dist <- ceiling(min(zip_dists[which(zip_dists != 0)]))
@@ -43,25 +43,52 @@ priors <- data.frame(complexity = rgamma(n_sim, shape = 0.9, rate = 0.2),
                      copy_strength = rexp(n_sim, rate = 0.5),
                      dist_strength = rexp(n_sim, rate = 0.5))
 
-#get number of cores
-n_cores <- parallel::detectCores()
+#wrap cattlebrandABM in a simpler function for slurm
+cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_strength, dist_strength){
+  #run full version of cattlebrandABM
+  cattlebrandABM(init_brands = as.matrix(brands_1990), components, all_zips, zip_dists,
+                 init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old,
+                 rot_prob, complexity = complexity, copy_radius = copy_radius,
+                 copy_strength = copy_strength, dist_radius = dist_radius,
+                 dist_strength = dist_strength, angles = FALSE, edit_dist_prop = 0.1)
+}
+
+#store required packages
+pkgs <- unique(getParseData(parse("cattlebrandABM.R"))$text[getParseData(parse("cattlebrandABM.R"))$token == "SYMBOL_PACKAGE"])
 
 #run simulations without angles
-sum_stats <- parallel::mclapply(1:n_sim, function(x){cattlebrandABM(init_brands = as.matrix(brands_1990), components, all_zips, zip_dists,
-                                                                    init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old,
-                                                                    rot_prob, complexity = priors$complexity[x], copy_radius = priors$copy_radius[x],
-                                                                    copy_strength = priors$copy_strength[x], dist_radius = priors$dist_radius[x],
-                                                                    dist_strength = priors$dist_strength[x], angles = FALSE, edit_dist_prop = 0.1)}, mc.cores = n_cores)
+slurm_a <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors",
+                               nodes = 4, cpus_per_node = 20, pkgs = pkgs, global_objects = objects())
 
-#run simulations with angles
-sum_stats_angles <- parallel::mclapply(1:n_sim, function(x){cattlebrandABM(init_brands = as.matrix(brands_1990), components, all_zips, zip_dists,
-                                                                    init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old,
-                                                                    rot_prob, complexity = priors$complexity[x], copy_radius = priors$copy_radius[x],
-                                                                    copy_strength = priors$copy_strength[x], dist_radius = priors$dist_radius[x],
-                                                                    dist_strength = priors$dist_strength[x], angles = FALSE, edit_dist_prop = 0.1)}, mc.cores = n_cores)
+#get output and clean files
+sum_stats_a <- rslurm::get_slurm_out(slurm_a)
+rslurm::cleanup_files(slurm_a)
 
-#combine into single object
-prior_simulations <- list(priors = priors, sum_stats = sum_stats, sum_stats_angles = sum_stats_angles)
-
-#save
+#save output
+prior_simulations <- list(priors = priors, sum_stats = sum_stats_a)
 save(prior_simulations, file = "prior_simulations.RData")
+
+#rewrap cattlebrandABM for slurm with angles this time
+cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_strength, dist_strength){
+  #run full version of cattlebrandABM
+  output <- cattlebrandABM(init_brands = as.matrix(brands_1990), components, all_zips, zip_dists,
+                           init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old,
+                           rot_prob, complexity = complexity, copy_radius = copy_radius,
+                           copy_strength = copy_strength, dist_radius = dist_radius,
+                           dist_strength = dist_strength, angles = TRUE, edit_dist_prop = 0.1)
+  
+  #return output
+  return(output)
+}
+
+#run simulations without angles
+slurm_b <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles",
+                               nodes = 4, cpus_per_node = 20, pkgs = pkgs, global_objects = objects())
+
+#get output and clean files
+sum_stats_b <- rslurm::get_slurm_out(slurm_b)
+rslurm::cleanup_files(slurm_b)
+
+#save output
+prior_simulations_angles <- list(priors = priors, sum_stats = sum_stats_b)
+save(prior_simulations_angles, file = "prior_simulations_angles.RData")
