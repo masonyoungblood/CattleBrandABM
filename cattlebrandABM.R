@@ -10,7 +10,7 @@
   #function, but it does not scale up as efficiently
 
 #faster version of %in%: https://stackoverflow.com/questions/32934933/faster-in-operator
-`%fin%` <- function(x, table){
+"%fin%" <- function(x, table){
   fastmatch::fmatch(x, table, nomatch = 0) > 0
 }
 

@@ -65,7 +65,3 @@ prior_simulations <- list(priors = priors, sum_stats = sum_stats, sum_stats_angl
 
 #save
 save(prior_simulations, file = "prior_simulations.RData")
-
-
-
-
