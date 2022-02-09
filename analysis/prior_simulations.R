@@ -30,7 +30,7 @@ n_old <- mean(c((nrow(data.table::fsetdiff(brands_1990, brands_2008))/18),
                 nrow(data.table::fsetdiff(brands_2015, brands_2016))))
 
 #number of simulations
-n_sim <- 40
+n_sim <- 2000
 
 #get minimum and maximum distances in data
 min_dist <- ceiling(min(zip_dists[which(zip_dists != 0)]))
