@@ -706,6 +706,9 @@ We also need to reshape components so it includes whether or not a component is 
 components <- data.table::data.table(components = components, rotatable = rotation$rot)
 components$rotatable[which(components$rotatable == "NA")] <- NA
 components$rotatable <- sapply(1:nrow(components), function(x){as.numeric(components$rotatable[[x]])})
+
+#save
+save(components, file = "components.RData")
 ```
 
 Eventually we can use the code below to set the limits of our prior for the sizes of the two radii.
@@ -785,3 +788,5 @@ plots[[27]] <- plots[[27]] + ggplot2::theme(axis.title.x = ggplot2::element_text
 
 cowplot::plot_grid(plotlist = plots, nrow = 9, byrow = FALSE, label_x = c(1, 2, 3))
 ```
+
+

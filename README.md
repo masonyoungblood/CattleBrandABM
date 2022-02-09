@@ -698,6 +698,9 @@ component is rotatable (or includes at least one comma).
 components <- data.table::data.table(components = components, rotatable = rotation$rot)
 components$rotatable[which(components$rotatable == "NA")] <- NA
 components$rotatable <- sapply(1:nrow(components), function(x){as.numeric(components$rotatable[[x]])})
+
+#save
+save(components, file = "components.RData")
 ```
 
 Eventually we can use the code below to set the limits of our prior for
@@ -734,7 +737,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_1990), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 23.51204 secs
+    ## Time difference of 23.81308 secs
 
 ``` r
 #print output
@@ -742,15 +745,15 @@ components_only
 ```
 
     ##       comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.09743835 0.002894639     66.54560     40.53447    0.3072368   0.3817316
-    ## 2014 0.08364815 0.003643679     75.44860     49.34347    0.3288582   0.3710294
-    ## 2015 0.08146067 0.003820225     76.76462     50.84122    0.3314296   0.3669273
-    ## 2016 0.07923497 0.003883846     78.04927     52.41185    0.3337289   0.3644130
+    ## 2008 0.09815177 0.003065884     66.17303     40.13223    0.3060377   0.3811168
+    ## 2014 0.08470104 0.003756540     74.82313     48.57235    0.3273006   0.3742476
+    ## 2015 0.08263126 0.003751882     76.08161     50.00470    0.3298472   0.3721015
+    ## 2016 0.08064334 0.003925019     77.52348     51.60242    0.3323938   0.3694806
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.7929684      0.8294175   2.618714
-    ## 2014       0.8267023      0.8026105   2.732275
-    ## 2015       0.8300846      0.7966828   2.718383
-    ## 2016       0.8334668      0.7923337   2.751734
+    ## 2008       0.7962617      0.8232590   2.652089
+    ## 2014       0.8299065      0.8040073   2.720781
+    ## 2015       0.8315977      0.7991132   2.722100
+    ## 2016       0.8349800      0.7936575   2.744177
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -762,7 +765,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 26.60413 secs
+    ## Time difference of 27.31306 secs
 
 ``` r
 #print output
@@ -770,15 +773,15 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.04390350 3.104915e-05     178.1385     100.2534   0.05550015   0.1815588
-    ## 2014 0.03402733 3.253090e-05     199.6833     120.8893   0.05537539   0.1804522
-    ## 2015 0.03247796 3.277292e-05     202.6392     124.2706   0.05497572   0.1799558
-    ## 2016 0.03101057 3.302510e-05     206.1169     127.9412   0.05496892   0.1776096
+    ## 2008 0.04337764 3.127443e-05     179.1352     100.0215   0.05505034   0.1871119
+    ## 2014 0.03387339 3.266479e-05     201.6696     121.3298   0.05517535   0.1759324
+    ## 2015 0.03293808 3.293808e-05     203.7512     123.6187   0.05519688   0.1741226
+    ## 2016 0.03103860 3.316090e-05     207.8281     127.7318   0.05539536   0.1725123
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.2185324      0.6626550   2.798389
-    ## 2014       0.2199343      0.6218298   2.802081
-    ## 2015       0.2183627      0.6118725   2.870381
-    ## 2016       0.2187541      0.6036818   2.842105
+    ## 2008       0.2171958      0.6534387   2.780388
+    ## 2014       0.2185886      0.6117949   2.844491
+    ## 2015       0.2189489      0.6053346   2.846406
+    ## 2016       0.2208107      0.6007165   2.852479
 
 The output of each model is a matrix with a row for each of the four
 sampling years, and a column for each of the nine summary statistics

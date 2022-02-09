@@ -57,7 +57,6 @@ brand_generator <- function(brands, components, zip, zip_dists, rot_prob, comple
           sim_angles[m] <- sample(components$rotatable[[sim_brand[m]]], 1, prob = ((copy_angles[, m][components$rotatable[[sim_brand[m]]]]+1)^copy_strength)*((1/(dist_angles[, m][components$rotatable[[sim_brand[m]]]]+1))^dist_strength))
         }
       }
-      
     }
   }
   
@@ -90,6 +89,7 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
     new_brands <- t(sapply(1:n_new, function(x){brand_generator(brands = running_brands, components = components, zip = new_zips[x], zip_dists = zip_dists, rot_prob = rot_prob, complexity = complexity, copy_radius = copy_radius, copy_strength = copy_strength, dist_radius = dist_radius, dist_strength = dist_strength, angles = angles)}))
     new_brands <- cbind(new_brands, new_zips)
     
+    #add new brands to running brands
     running_brands <- rbind(running_brands, new_brands)
     
     #randomly remove N overall brands
@@ -97,129 +97,145 @@ cattlebrandABM <- function(init_brands, components, all_zips, zip_dists, init_ye
     
     #if it is a sampling year then calculate frequency distributions and summary statistics
     if(i %fin% c(sampling_years - init_year)){
-      #if angles are not considered, then generate component frequencies without them (and generate brand frequencies with respective columns selected)
-      if(!angles){
-        #if edit distances are to be calculated and included in summary statistics, then calculate them
-        if(edit_dist_prop > 0){
-          #construct matrix of edit distances
-          edit_dist_mat <- adist(sapply(sample(nrow(running_brands), nrow(running_brands)*edit_dist_prop, replace = FALSE), function(x){intToUtf8(running_brands[x, 1:4])}))
-        }
-        
-        #get component frequencies
-        comp_freqs <- as.numeric(sort(Rfast::Table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), decreasing = TRUE))
-        
-        #construct components by zip codes matrix
-        comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
-          (as.numeric(Rfast::Table(c(0:nrow(components), running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4])))-1)[-1]
-        }))
-        if(length(which(Rfast::colsums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[, -which(Rfast::colsums(comp_beta_zip_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[-which(Rfast::rowsums(comp_beta_zip_mat) == 0), ] #remove empty rows
-        }
-        
-        #get unique counties to save processing time
-        unique_counties <- unique(all_zips$county)
-        
-        #construct components by counties matrix
-        comp_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
-          (as.numeric(Rfast::Table(c(0:nrow(components), running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4])))-1)[-1]
-        }))
-        if(length(which(Rfast::colsums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[, -which(Rfast::colsums(comp_beta_county_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
-        }
-
-        #remove temporary variables
-        rm(list = c("unique_counties"))
-      }
-      
-      #if angles are considered, then generate component frequencies with them
-      if(angles){
-        #if edit distances are to be calculated and included in summary statistics, then calculate them
-        if(edit_dist_prop > 0){
-          #construct matrix of edit distances
-          edit_dist_mat <- adist(sapply(sample(nrow(running_brands), nrow(running_brands)*edit_dist_prop, replace = FALSE), function(x){intToUtf8(as.numeric(paste0(running_brands[x, 1:4], running_brands[x, 5:8])))}))
-        }
-        
-        #extract combinations of components and angles (for now just combining them as a string and remove "0 0")
-        comp_angle_combos <- c(sapply(1:nrow(running_brands), function(x){paste(c(running_brands[x, 1:4]), c(running_brands[x, 5:8]))}))
-        unique_comp_angle_combos <- unique(comp_angle_combos) #run this before the next line, because "0 0" needs to be accounted for later
-        comp_angle_combos <- comp_angle_combos[-which(comp_angle_combos == "0 0")]
-        
-        #get component frequencies (where rotated components are treated as unique)
-        comp_freqs <- as.numeric(sort(Rfast::Table(comp_angle_combos), decreasing = TRUE))
-        
-        #construct components by zip codes matrix
-        comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
-          (as.numeric(Rfast::Table(c(unique_comp_angle_combos, paste(c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4]), c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 5:8])))))-1)[-1]
-        }))
-        if(length(which(Rfast::colsums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[, -which(Rfast::colsums(comp_beta_zip_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(comp_beta_zip_mat) == 0)) > 0){
-          comp_beta_zip_mat <- comp_beta_zip_mat[-which(Rfast::rowsums(comp_beta_zip_mat) == 0), ] #remove empty rows
-        }
-        
-        #get unique counties to save processing time
-        unique_counties <- unique(all_zips$county)
-        
-        #construct components by counties matrix
-        comp_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
-          (as.numeric(Rfast::Table(c(unique_comp_angle_combos, paste(c(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4]), c(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 5:8])))))-1)[-1]
-        }))
-        if(length(which(Rfast::colsums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[, -which(Rfast::colsums(comp_beta_county_mat) == 0)] #remove empty columns
-        }
-        if(length(which(Rfast::rowsums(comp_beta_county_mat) == 0)) > 0){
-          comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
-        }
-        
-        #remove temporary variables
-        rm(list = c("comp_angle_combos", "unique_comp_angle_combos", "unique_counties"))
-      }
-      
-      #calculate summary statistics
-      if(edit_dist_prop > 0){
-        sum_stats <- c(max(comp_freqs)/sum(comp_freqs), #proportion of the most common component
-                       min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
-                       hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
-                       hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
-                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
-                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
-                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
-                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity, #morisita-horn index (counties)
-                       mean(edit_dist_mat[upper.tri(edit_dist_mat)])) #mean edit distance
-      }
-      if(edit_dist_prop == 0){
-        sum_stats <- c(max(comp_freqs)/sum(comp_freqs), #proportion of the most common component
-                       min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
-                       hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
-                       hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
-                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
-                       hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
-                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
-                       hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity) #morisita-horn index (counties)
-      }
-      
       #store summary statistics in the output matrix
-      output[match(i, sampling_years - init_year), ] <- sum_stats
-      
-      #remove temporary objects
-      if(edit_dist_prop > 0){rm(list = c("comp_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "sum_stats", "edit_dist_mat"))}
-      if(edit_dist_prop == 0){rm(list = c("comp_freqs", "comp_beta_zip_mat", "comp_beta_county_mat", "sum_stats"))}
+      output[match(i, sampling_years - init_year), ] <- get_sum_stats(running_brands = running_brands, components = components, all_zips = all_zips, angles = angles, edit_dist_prop = edit_dist_prop)
     }
     
     #remove temporary objects
     rm(list = c("new_zips", "new_brands"))
   }
   
+  #add names to output object
   if(edit_dist_prop > 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county", "brand_edit")}
   if(edit_dist_prop == 0){colnames(output) <- c("comp_most", "comp_least", "comp_shannon", "comp_simpson", "comp_jac_zip", "comp_mh_zip", "comp_jac_county", "comp_mh_county")}
   rownames(output) <- sampling_years
   
   return(output)
 }
+
+#get summary statistics, to be used on both the simulated and observed data
+get_sum_stats <- function(running_brands, components, all_zips, angles = FALSE, edit_dist_prop = 0.1){
+  #if angles are not considered, then generate component frequencies without them (and generate brand frequencies with respective columns selected)
+  if(!angles){
+    #if edit distances are to be calculated and included in summary statistics, then calculate them
+    if(edit_dist_prop > 0){
+      #construct matrix of edit distances
+      edit_dist_mat <- adist(sapply(sample(nrow(running_brands), nrow(running_brands)*edit_dist_prop, replace = FALSE), function(x){intToUtf8(running_brands[x, 1:4])}))
+    }
+    
+    #get component frequencies
+    comp_freqs <- as.numeric(sort(Rfast::Table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), decreasing = TRUE))
+    
+    #construct components by zip codes matrix
+    comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
+      (as.numeric(Rfast::Table(c(0:nrow(components), running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4])))-1)[-1]
+    }))
+    if(length(which(Rfast::colsums(comp_beta_zip_mat) == 0)) > 0){
+      comp_beta_zip_mat <- comp_beta_zip_mat[, -which(Rfast::colsums(comp_beta_zip_mat) == 0)] #remove empty columns
+    }
+    if(length(which(Rfast::rowsums(comp_beta_zip_mat) == 0)) > 0){
+      comp_beta_zip_mat <- comp_beta_zip_mat[-which(Rfast::rowsums(comp_beta_zip_mat) == 0), ] #remove empty rows
+    }
+    
+    #get unique counties to save processing time
+    unique_counties <- unique(all_zips$county)
+    
+    #construct components by counties matrix
+    comp_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
+      (as.numeric(Rfast::Table(c(0:nrow(components), running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4])))-1)[-1]
+    }))
+    if(length(which(Rfast::colsums(comp_beta_county_mat) == 0)) > 0){
+      comp_beta_county_mat <- comp_beta_county_mat[, -which(Rfast::colsums(comp_beta_county_mat) == 0)] #remove empty columns
+    }
+    if(length(which(Rfast::rowsums(comp_beta_county_mat) == 0)) > 0){
+      comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
+    }
+    
+    #remove temporary variables
+    rm(list = c("unique_counties"))
+  }
+  
+  #if angles are considered, then generate component frequencies with them
+  if(angles){
+    #if edit distances are to be calculated and included in summary statistics, then calculate them
+    if(edit_dist_prop > 0){
+      #construct matrix of edit distances
+      edit_dist_mat <- adist(sapply(sample(nrow(running_brands), nrow(running_brands)*edit_dist_prop, replace = FALSE), function(x){intToUtf8(as.numeric(paste0(running_brands[x, 1:4], running_brands[x, 5:8])))}))
+    }
+    
+    #extract combinations of components and angles (for now just combining them as a string and remove "0 0")
+    comp_angle_combos <- c(sapply(1:nrow(running_brands), function(x){paste(c(running_brands[x, 1:4]), c(running_brands[x, 5:8]))}))
+    unique_comp_angle_combos <- unique(comp_angle_combos) #run this before the next line, because "0 0" needs to be accounted for later
+    comp_angle_combos <- comp_angle_combos[-which(comp_angle_combos == "0 0")]
+    
+    #get component frequencies (where rotated components are treated as unique)
+    comp_freqs <- as.numeric(sort(Rfast::Table(comp_angle_combos), decreasing = TRUE))
+    
+    #construct components by zip codes matrix
+    comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
+      (as.numeric(Rfast::Table(c(unique_comp_angle_combos, paste(c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 1:4]), c(running_brands[which(running_brands[, 9] == all_zips$zip[x]), 5:8])))))-1)[-1]
+    }))
+    if(length(which(Rfast::colsums(comp_beta_zip_mat) == 0)) > 0){
+      comp_beta_zip_mat <- comp_beta_zip_mat[, -which(Rfast::colsums(comp_beta_zip_mat) == 0)] #remove empty columns
+    }
+    if(length(which(Rfast::rowsums(comp_beta_zip_mat) == 0)) > 0){
+      comp_beta_zip_mat <- comp_beta_zip_mat[-which(Rfast::rowsums(comp_beta_zip_mat) == 0), ] #remove empty rows
+    }
+    
+    #get unique counties to save processing time
+    unique_counties <- unique(all_zips$county)
+    
+    #construct components by counties matrix
+    comp_beta_county_mat <- t(sapply(1:length(unique_counties), function(x){
+      (as.numeric(Rfast::Table(c(unique_comp_angle_combos, paste(c(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 1:4]), c(running_brands[which(running_brands[, 9] %fin% all_zips$zip[which(all_zips$county == unique_counties[x])]), 5:8])))))-1)[-1]
+    }))
+    if(length(which(Rfast::colsums(comp_beta_county_mat) == 0)) > 0){
+      comp_beta_county_mat <- comp_beta_county_mat[, -which(Rfast::colsums(comp_beta_county_mat) == 0)] #remove empty columns
+    }
+    if(length(which(Rfast::rowsums(comp_beta_county_mat) == 0)) > 0){
+      comp_beta_county_mat <- comp_beta_county_mat[-which(Rfast::rowsums(comp_beta_county_mat) == 0), ] #remove empty rows
+    }
+    
+    #remove temporary variables
+    rm(list = c("comp_angle_combos", "unique_comp_angle_combos", "unique_counties"))
+  }
+  
+  #calculate summary statistics
+  if(edit_dist_prop > 0){
+    sum_stats <- c(max(comp_freqs)/sum(comp_freqs), #proportion of the most common component
+                   min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
+                   hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
+                   hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
+                   hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
+                   hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
+                   hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
+                   hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity, #morisita-horn index (counties)
+                   mean(edit_dist_mat[upper.tri(edit_dist_mat)])) #mean edit distance
+  }
+  if(edit_dist_prop == 0){
+    sum_stats <- c(max(comp_freqs)/sum(comp_freqs), #proportion of the most common component
+                   min(comp_freqs)/sum(comp_freqs), #proportion of the least common component
+                   hillR::hill_taxa(comp_freqs, q = 1), #shannon's diversity index
+                   hillR::hill_taxa(comp_freqs, q = 2), #simpson's diversity index
+                   hillR::hill_taxa_parti(comp_beta_zip_mat, q = 0)$region_similarity, #jaccard index (zip codes)
+                   hillR::hill_taxa_parti(comp_beta_zip_mat, q = 2)$local_similarity, #morisita-horn index (zip codes)
+                   hillR::hill_taxa_parti(comp_beta_county_mat, q = 0)$region_similarity, #jaccard index (counties)
+                   hillR::hill_taxa_parti(comp_beta_county_mat, q = 2)$local_similarity) #morisita-horn index (counties)
+  }
+  
+  #return summary statistics
+  return(sum_stats)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
