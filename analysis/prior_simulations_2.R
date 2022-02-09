@@ -46,18 +46,19 @@ priors <- data.frame(complexity = rgamma(n_sim, shape = 0.9, rate = 0.2),
 #wrap cattlebrandABM in a simpler function for slurm
 cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_strength, dist_strength){
   #run full version of cattlebrandABM
-  output <- cattlebrandABM(init_brands = as.matrix(brands_1990), components, all_zips, zip_dists,
-                           init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old,
-                           rot_prob, complexity = complexity, copy_radius = copy_radius,
-                           copy_strength = copy_strength, dist_radius = dist_radius,
-                           dist_strength = dist_strength, angles = FALSE, edit_dist_prop = 0.1)
-  
-  #return output
-  return(output)
+  cattlebrandABM(init_brands = as.matrix(brands_1990), components, all_zips, zip_dists,
+                 init_year = 1990, sampling_years = c(2008, 2014, 2015, 2016), n_new, n_old,
+                 rot_prob, complexity = complexity, copy_radius = copy_radius,
+                 copy_strength = copy_strength, dist_radius = dist_radius,
+                 dist_strength = dist_strength, angles = FALSE, edit_dist_prop = 0.1)
 }
 
+#store required packages
+pkgs <- unique(getParseData(parse("cattlebrandABM.R"))$text[getParseData(parse("cattlebrandABM.R"))$token == "SYMBOL_PACKAGE"])
+
 #run simulations without angles
-rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors", nodes = 4, cpus_per_node = 2, libPaths = "/data/users/youngblood/r_library")
+rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors", nodes = 4, cpus_per_node = 10,
+                    pkgs = pkgs, global_objects = objects())
 
 #rewrap cattlebrandABM for slurm with angles this time
 cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_strength, dist_strength){
@@ -73,7 +74,8 @@ cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_stre
 }
 
 #run simulations without angles
-rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles", nodes = 4, cpus_per_node = 2, libPaths = "/data/users/youngblood/r_library")
+rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles", nodes = 4, cpus_per_node = 10,
+                    pkgs = pkgs, global_objects = objects())
 
 
 
