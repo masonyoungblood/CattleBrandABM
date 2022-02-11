@@ -30,7 +30,7 @@ n_old <- mean(c((nrow(data.table::fsetdiff(brands_1990, brands_2008))/18),
                 nrow(data.table::fsetdiff(brands_2015, brands_2016))))
 
 #number of simulations
-n_sim <- 2000
+n_sim <- 10000
 
 #get minimum and maximum distances in data
 min_dist <- ceiling(min(zip_dists[which(zip_dists != 0)]))
@@ -58,7 +58,7 @@ pkgs <- unique(getParseData(parse("cattlebrandABM.R"))$text[getParseData(parse("
 
 #run simulations without angles
 slurm_a <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors",
-                               nodes = 4, cpus_per_node = 20, pkgs = pkgs, global_objects = objects())
+                               nodes = 4, cpus_per_node = 25, pkgs = pkgs, global_objects = objects())
 
 #get output and clean files
 sum_stats_a <- rslurm::get_slurm_out(slurm_a)
@@ -83,7 +83,7 @@ cattlebrandABM_slurm <- function(complexity, copy_radius, dist_radius, copy_stre
 
 #run simulations without angles
 slurm_b <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors_angles",
-                               nodes = 4, cpus_per_node = 20, pkgs = pkgs, global_objects = objects())
+                               nodes = 4, cpus_per_node = 25, pkgs = pkgs, global_objects = objects())
 
 #get output and clean files
 sum_stats_b <- rslurm::get_slurm_out(slurm_b)
