@@ -29,12 +29,15 @@ sum_stats_b <- do.call("rbind", lapply(1:length(prior_simulations_angles$sum_sta
 pca <- prcomp(rbind(sum_stats_a, sum_stats_b), scale = TRUE)
 predicted <- predict(pca, data.frame(t(c(obs_sum_stats))))
 
+#opacity
+opacity <- 0.03
+
 #create plot
 png("analysis/prior_simulations.png", units = "in", width = 4.5, height = 4.5, res = 300)
 par(mar = c(4.5, 4.5, 1, 1))
-plot(pca$x[,1], pca$x[,2], col = c(rep(scales::alpha("blue", 0.1), nrow(sum_stats_a)), rep(scales::alpha("red", 0.1), nrow(sum_stats_a))), pch = 16, xlab = "PC1", ylab = "PC2")
+plot(pca$x[,1], pca$x[,2], col = c(rep(scales::alpha("blue", opacity), nrow(sum_stats_a)), rep(scales::alpha("red", opacity), nrow(sum_stats_a))), pch = 16, xlab = "PC1", ylab = "PC2")
 points(predicted[,1], predicted[,2], col = "black", pch = 8, cex = 4)
-legend("topleft", c("without angles", "with angles"), col = c("blue", "red"), pch = 16)
+legend("topleft", c("without angles", "with angles"), col = c("blue", "red"), pch = 16, pt.cex = 1, cex = 0.8)
 dev.off()
 
 
