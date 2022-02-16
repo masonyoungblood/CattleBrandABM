@@ -49,7 +49,7 @@ pkgs <- unique(getParseData(parse("cattlebrandABM.R"))$text[getParseData(parse("
 #run simulations, 
 for(i in 1:5){
   #number of simulations
-  n_sim <- 100
+  n_sim <- 100000
   
   #set priors
   priors <- data.frame(complexity = rgamma(n_sim, shape = 0.9, rate = 0.2),
@@ -59,7 +59,7 @@ for(i in 1:5){
                        dist_strength = rexp(n_sim, rate = 0.5))
   
   #run simulations without angles
-  slurm <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "priors",
+  slurm <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "main",
                                nodes = 4, cpus_per_node = 25, pkgs = pkgs, global_objects = objects())
   
   #get output and clean files
