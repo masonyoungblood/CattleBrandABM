@@ -446,6 +446,12 @@ Here's a sample of what this matrix looks like.
 brands[1:10,]
 ```
 
+And here is the distribution of brands in terms of numbers of components.
+
+```{r}
+table(sapply(1:nrow(brands), function(x){length(which(brands[x, 1:4] != 0))}))
+```
+
 ```{r echo = FALSE}
 #create data table of counties
 counties <- tigris::list_counties("KS")
@@ -534,6 +540,96 @@ percent_singleton <- round((length(which(as.numeric(table(all_components)) == 1)
 ```
 
 The total number of brands in the dataset, after removing duplicates within zip codes, is `r scales::comma(nrow(brands))`. For brands with two components, `r scales::comma(length(which(n_components == 2 & which_old)))` of them only appear in 1990 ("old") and `r scales::comma(length(which(n_components == 2 & which_young)))` of them only appear in 2008-2016 ("young"). For brands with three components, `r scales::comma(length(which(n_components == 3 & which_old)))` of them are old and `r scales::comma(length(which(n_components == 3 & which_young)))` of them are young. Only `r round((length(which(n_components == 4))/length(n_components))*100, 2)`% of brands have four components, and only `r percent_singleton`% of component types are singletons (i.e. only appear once). Here is a further breakdown of the brands in terms of the four geographic quadrants described in the preregistration document, for each combination of age and complexity:
+
+```{r echo = FALSE, eval = FALSE}
+#create function for removing singletons from subset
+singleton_removal <- function(matrix){
+  to_remove <- which(sapply(1:nrow(matrix), function(x){length(which(matrix[x, 1:4] %in% as.numeric(names(which(table(c(matrix[, 1:4])) == 1))))) > 0}))
+  return(matrix[-to_remove, ])
+}
+
+#set random seed
+set.seed(12345)
+
+#create structured and mixed datasets
+o_ne_2 <- brands[which(which_old & brands_quadrants == "NE" & n_components == 2), ]
+o_ne_2_mixed <- brands[sample(which(brands_quadrants == "NE" & n_components == 2), nrow(o_ne_2)), ]
+o_ne_3 <- brands[which(which_old & brands_quadrants == "NE" & n_components == 3), ]
+o_ne_3_mixed <- brands[sample(which(brands_quadrants == "NE" & n_components == 3), nrow(o_ne_3)), ]
+y_ne_2 <- brands[which(which_young & brands_quadrants == "NE" & n_components == 2), ]
+y_ne_2_mixed <- brands[sample(which(brands_quadrants == "NE" & n_components == 2), nrow(y_ne_2)), ]
+y_ne_3 <- brands[which(which_young & brands_quadrants == "NE" & n_components == 3), ]
+y_ne_3_mixed <- brands[sample(which(brands_quadrants == "NE" & n_components == 3), nrow(y_ne_3)), ]
+o_nw_2 <- brands[which(which_old & brands_quadrants == "NW" & n_components == 2), ]
+o_nw_2_mixed <- brands[sample(which(brands_quadrants == "NW" & n_components == 2), nrow(o_nw_2)), ]
+o_nw_3 <- brands[which(which_old & brands_quadrants == "NW" & n_components == 3), ]
+o_nw_3_mixed <- brands[sample(which(brands_quadrants == "NW" & n_components == 3), nrow(o_nw_3)), ]
+y_nw_2 <- brands[which(which_young & brands_quadrants == "NW" & n_components == 2), ]
+y_nw_2_mixed <- brands[sample(which(brands_quadrants == "NW" & n_components == 2), nrow(y_nw_2)), ]
+y_nw_3 <- brands[which(which_young & brands_quadrants == "NW" & n_components == 3), ]
+y_nw_3_mixed <- brands[sample(which(brands_quadrants == "NW" & n_components == 3), nrow(y_nw_3)), ]
+o_se_2 <- brands[which(which_old & brands_quadrants == "SE" & n_components == 2), ]
+o_se_2_mixed <- brands[sample(which(brands_quadrants == "SE" & n_components == 2), nrow(o_se_2)), ]
+o_se_3 <- brands[which(which_old & brands_quadrants == "SE" & n_components == 3), ]
+o_se_3_mixed <- brands[sample(which(brands_quadrants == "SE" & n_components == 3), nrow(o_se_3)), ]
+y_se_2 <- brands[which(which_young & brands_quadrants == "SE" & n_components == 2), ]
+y_se_2_mixed <- brands[sample(which(brands_quadrants == "SE" & n_components == 2), nrow(y_se_2)), ]
+y_se_3 <- brands[which(which_young & brands_quadrants == "SE" & n_components == 3), ]
+y_se_3_mixed <- brands[sample(which(brands_quadrants == "SE" & n_components == 3), nrow(y_se_3)), ]
+o_sw_2 <- brands[which(which_old & brands_quadrants == "SW" & n_components == 2), ]
+o_sw_2_mixed <- brands[sample(which(brands_quadrants == "SW" & n_components == 2), nrow(o_sw_2)), ]
+o_sw_3 <- brands[which(which_old & brands_quadrants == "SW" & n_components == 3), ]
+o_sw_3_mixed <- brands[sample(which(brands_quadrants == "SW" & n_components == 3), nrow(o_sw_3)), ]
+y_sw_2 <- brands[which(which_young & brands_quadrants == "SW" & n_components == 2), ]
+y_sw_2_mixed <- brands[sample(which(brands_quadrants == "SW" & n_components == 2), nrow(y_sw_2)), ]
+y_sw_3 <- brands[which(which_young & brands_quadrants == "SW" & n_components == 3), ]
+y_sw_3_mixed <- brands[sample(which(brands_quadrants == "SW" & n_components == 3), nrow(y_sw_3)), ]
+
+# #remove singletons from all of these
+# o_ne_2 <- singleton_removal(o_ne_2)
+# o_ne_2_mixed <- singleton_removal(o_ne_2_mixed)
+# o_ne_3 <- singleton_removal(o_ne_3)
+# o_ne_3_mixed <- singleton_removal(o_ne_3_mixed)
+# y_ne_2 <- singleton_removal(y_ne_2)
+# y_ne_2_mixed <- singleton_removal(y_ne_2_mixed)
+# y_ne_3 <- singleton_removal(y_ne_3)
+# y_ne_3_mixed <- singleton_removal(y_ne_3_mixed)
+# o_nw_2 <- singleton_removal(o_nw_2)
+# o_nw_2_mixed <- singleton_removal(o_nw_2_mixed)
+# o_nw_3 <- singleton_removal(o_nw_3)
+# o_nw_3_mixed <- singleton_removal(o_nw_3_mixed)
+# y_nw_2 <- singleton_removal(y_nw_2)
+# y_nw_2_mixed <- singleton_removal(y_nw_2_mixed)
+# y_nw_3 <- singleton_removal(y_nw_3)
+# y_nw_3_mixed <- singleton_removal(y_nw_3_mixed)
+# o_se_2 <- singleton_removal(o_se_2)
+# o_se_2_mixed <- singleton_removal(o_se_2_mixed)
+# o_se_3 <- singleton_removal(o_se_3)
+# o_se_3_mixed <- singleton_removal(o_se_3_mixed)
+# y_se_2 <- singleton_removal(y_se_2)
+# y_se_2_mixed <- singleton_removal(y_se_2_mixed)
+# y_se_3 <- singleton_removal(y_se_3)
+# y_se_3_mixed <- singleton_removal(y_se_3_mixed)
+# o_sw_2 <- singleton_removal(o_sw_2)
+# o_sw_2_mixed <- singleton_removal(o_sw_2_mixed)
+# o_sw_3 <- singleton_removal(o_sw_3)
+# o_sw_3_mixed <- singleton_removal(o_sw_3_mixed)
+# y_sw_2 <- singleton_removal(y_sw_2)
+# y_sw_2_mixed <- singleton_removal(y_sw_2_mixed)
+# y_sw_3 <- singleton_removal(y_sw_3)
+# y_sw_3_mixed <- singleton_removal(y_sw_3_mixed)
+
+#save structured and mixed datasets
+subsets <- list(o_ne_2 = o_ne_2, o_ne_2_mixed = o_ne_2_mixed, o_ne_3 = o_ne_3, o_ne_3_mixed = o_ne_3_mixed,
+                y_ne_2 = y_ne_2, y_ne_2_mixed = y_ne_2_mixed, y_ne_3 = y_ne_3, y_ne_3_mixed = y_ne_3_mixed,
+                o_nw_2 = o_nw_2, o_nw_2_mixed = o_nw_2_mixed, o_nw_3 = o_nw_3, o_nw_3_mixed = o_nw_3_mixed,
+                y_nw_2 = y_nw_2, y_nw_2_mixed = y_nw_2_mixed, y_nw_3 = y_nw_3, y_nw_3_mixed = y_nw_3_mixed,
+                o_se_2 = o_se_2, o_se_2_mixed = o_se_2_mixed, o_se_3 = o_se_3, o_se_3_mixed = o_se_3_mixed,
+                y_se_2 = y_se_2, y_se_2_mixed = y_se_2_mixed, y_se_3 = y_se_3, y_se_3_mixed = y_se_3_mixed,
+                o_sw_2 = o_sw_2, o_sw_2_mixed = o_sw_2_mixed, o_sw_3 = o_sw_3, o_sw_3_mixed = o_sw_3_mixed,
+                y_sw_2 = y_sw_2, y_sw_2_mixed = y_sw_2_mixed, y_sw_3 = y_sw_3, y_sw_3_mixed = y_sw_3_mixed)
+save(subsets, file = "analysis/subsets.RData")
+```
 
 ```{r echo = FALSE}
 #construct and print table of sample sizes for each combination of age, complexity, and quadrant
