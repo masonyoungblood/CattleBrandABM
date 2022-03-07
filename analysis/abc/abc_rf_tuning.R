@@ -94,4 +94,4 @@ for(i in 1:5){
 
 #save recommended parameters
 abc_rf_tuning <- lapply(1:length(abc_rf_tuning), function(x){abc_rf_tuning[[x]]$recommended.pars})
-save(abc_rf_tuning, file = "analysis/abc_rf_tuning.RData")
+save(abc_rf_tuning, file = "analysis/abc/abc_rf_tuning.RData")
