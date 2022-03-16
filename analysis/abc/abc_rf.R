@@ -57,7 +57,7 @@ extract_weights <- function(object, obs, training, paral=FALSE, ncores= if(paral
 }
 
 #load data
-load("analysis/abc_rf_tuning.RData")
+load("analysis/abc/abc_rf_tuning.RData")
 load("analysis/main_simulations/main_simulations_1.RData")
 a <- main_simulations
 load("analysis/main_simulations/main_simulations_2.RData")
@@ -150,9 +150,32 @@ i <- i + 1
 #load saved predictions
 load("analysis/abc/abc_rf_predictions.RData")
 
+#construct predictions table, with mse because (1) nmae is inf for radii and (2) it can be easily back-transformed
+predictions_table <- data.frame(median = c(exp(as.numeric(abc_rf_predictions[[1]]$prediction$med)),
+                                           inv_logit(as.numeric(abc_rf_predictions[[2]]$prediction$med), logit_bounds),
+                                           inv_logit(as.numeric(abc_rf_predictions[[3]]$prediction$med), logit_bounds),
+                                           exp(as.numeric(abc_rf_predictions[[4]]$prediction$med)),
+                                           exp(as.numeric(abc_rf_predictions[[5]]$prediction$med))),
+                                low_quant = c(exp(as.numeric(abc_rf_predictions[[1]]$prediction$quantiles[1])),
+                                              inv_logit(as.numeric(abc_rf_predictions[[2]]$prediction$quantiles[1]), logit_bounds),
+                                              inv_logit(as.numeric(abc_rf_predictions[[3]]$prediction$quantiles[1]), logit_bounds),
+                                              exp(as.numeric(abc_rf_predictions[[4]]$prediction$quantiles[1])),
+                                              exp(as.numeric(abc_rf_predictions[[5]]$prediction$quantiles[1]))),
+                                high_quant = c(exp(as.numeric(abc_rf_predictions[[1]]$prediction$quantiles[2])),
+                                               inv_logit(as.numeric(abc_rf_predictions[[2]]$prediction$quantiles[2]), logit_bounds),
+                                               inv_logit(as.numeric(abc_rf_predictions[[3]]$prediction$quantiles[2]), logit_bounds),
+                                               exp(as.numeric(abc_rf_predictions[[4]]$prediction$quantiles[2])),
+                                               exp(as.numeric(abc_rf_predictions[[5]]$prediction$quantiles[2]))),
+                                rmsle = c(sqrt(as.numeric(abc_rf_predictions[[1]]$OOB_MSE)),
+                                          sqrt(as.numeric(abc_rf_predictions[[2]]$OOB_MSE)),
+                                          sqrt(as.numeric(abc_rf_predictions[[3]]$OOB_MSE)),
+                                          sqrt(as.numeric(abc_rf_predictions[[4]]$OOB_MSE)),
+                                          sqrt(as.numeric(abc_rf_predictions[[5]]$OOB_MSE))))
+
 #plot
-xlabs <- c("Complexity", "Copy Radius", "Dist Radius", "Copy Strength", "Dist Strength")
-xlims <- list(c(0, 5), c(1, 689), c(1, 689), c(0, 10), c(0, 10))
+xlabs <- list(expression(Complexity~"("*italic(paste(lambda))*")"), expression(Copy~Radius~"("*italic(R[C])*")"), expression(Dist~Radius~"("*italic(R[D])*")"), expression(Copy~Strength~"("*italic(C)*")"), expression(Dist~Strength~"("*italic(D)*")"))
+xlims <- list(c(0, 8), c(1, 689), c(1, 689), c(0, 10), c(0, 10))
+group_lines <- c("1" = "dotted", "0" = "solid")
 for(i in 1:ncol(transf_priors)){
   if(i %in% c(1, 4, 5)){
     temp <- density(exp(transf_priors[, i]), weights = abc_rf_predictions[[i]]$weights)
@@ -164,17 +187,19 @@ for(i in 1:ncol(transf_priors)){
   posterior <- data.frame(value = temp$x, density = temp$y, id = 1, lt = 0)
   combined <- rbind(posterior, prior)
   plot <- ggplot(combined) + geom_line(mapping = aes(x = value, y = density, group = id, linetype = as.factor(lt))) + 
-    xlab(xlabs[i]) + ylab("Density") + xlim(xlims[[i]]) + 
-    theme_linedraw() + theme(legend.position = "none", axis.title.x = ggtext::element_markdown())
+    labs(x = xlabs[[i]], y = "Density") + xlim(xlims[[i]]) + 
+    theme_linedraw() + 
+    scale_linetype_manual(name = NULL, values = group_lines, labels = c("Prior", "Posterior"))
   assign(names(transf_priors)[i], plot)
 }
 
 #combine plots and print to file
 png("analysis/abc/abc_rf_posteriors.png", units = "in", width = 11, height = 7, res = 300)
-plot_grid(complexity,
-          copy_radius,
-          dist_radius,
-          copy_strength,
-          dist_strength,
-          labels = c("A", "B", "C", "D", "E"), align = "hv")
+legend <- get_legend(complexity)
+plot_grid(complexity + theme(legend.position="none"),
+          copy_radius + theme(legend.position="none"),
+          dist_radius + theme(legend.position="none"),
+          copy_strength + theme(legend.position="none"),
+          dist_strength + theme(legend.position="none"),
+          legend, labels = c("A", "B", "C", "D", "E"), align = "hv")
 dev.off()

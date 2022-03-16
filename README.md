@@ -472,6 +472,17 @@ brands[1:10,]
     ##  [9,]   28    0    0    0    0    0    0    0 66428  1990
     ## [10,]   28    0    0    0    0    0    0    0 67869  1990
 
+And here is the distribution of brands in terms of numbers of
+components.
+
+``` r
+table(sapply(1:nrow(brands), function(x){length(which(brands[x, 1:4] != 0))}))
+```
+
+    ## 
+    ##     1     2     3     4 
+    ##   734 58722 19935  1672
+
 The total number of brands in the dataset, after removing duplicates
 within zip codes, is 81,063. For brands with two components, 2,092 of
 them only appear in 1990 (“old”) and 3,265 of them only appear in
@@ -571,7 +582,7 @@ of each zip code rather than their boundaries, as the only shapefiles
 available at the zip code level are for the US Census’ “zip code
 tabulation areas”, which do not include all locations in the dataset.
 
-<img src="README_files/figure-gfm/unnamed-chunk-25-1.png" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-27-1.png" width="75%" style="display: block; margin: auto;" />
 
 To simulate simplicity and complexity, the number of components in each
 new brand is drawn from a Poisson distribution where *λ* is the
@@ -581,7 +592,7 @@ four components when *λ* is 0.5, 3, and 15. Note that the normalization
 here is only for plotting purposes - We will using the raw output of
 `dpois` as the `prob` argument of base R’s `sample` function.
 
-<img src="README_files/figure-gfm/unnamed-chunk-26-1.png" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-28-1.png" width="75%" style="display: block; margin: auto;" />
 
 At the beginning of each year in the ABM a set of `n_new` brands is
 created, where `n_new` is the average number of new brands that appear
@@ -737,7 +748,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_1990), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 23.81308 secs
+    ## Time difference of 21.91012 secs
 
 ``` r
 #print output
@@ -745,15 +756,15 @@ components_only
 ```
 
     ##       comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.09815177 0.003065884     66.17303     40.13223    0.3060377   0.3811168
-    ## 2014 0.08470104 0.003756540     74.82313     48.57235    0.3273006   0.3742476
-    ## 2015 0.08263126 0.003751882     76.08161     50.00470    0.3298472   0.3721015
-    ## 2016 0.08064334 0.003925019     77.52348     51.60242    0.3323938   0.3694806
+    ## 2008 0.09887626 0.002912600     66.18370     40.03761    0.3059882   0.3816356
+    ## 2014 0.08450389 0.003578778     74.83653     48.67253    0.3268308   0.3744006
+    ## 2015 0.08203643 0.003727908     76.34310     50.40145    0.3299585   0.3712185
+    ## 2016 0.07967256 0.003856215     77.65338     51.98125    0.3323567   0.3681340
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.7962617      0.8232590   2.652089
-    ## 2014       0.8299065      0.8040073   2.720781
-    ## 2015       0.8315977      0.7991132   2.722100
-    ## 2016       0.8349800      0.7936575   2.744177
+    ## 2008       0.7948376      0.8293283   2.639500
+    ## 2014       0.8256342      0.8046844   2.713235
+    ## 2015       0.8296395      0.7991179   2.754377
+    ## 2016       0.8326658      0.7868608   2.745843
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -765,7 +776,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 27.31306 secs
+    ## Time difference of 26.20283 secs
 
 ``` r
 #print output
@@ -773,15 +784,15 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.04337764 3.127443e-05     179.1352     100.0215   0.05505034   0.1871119
-    ## 2014 0.03387339 3.266479e-05     201.6696     121.3298   0.05517535   0.1759324
-    ## 2015 0.03293808 3.293808e-05     203.7512     123.6187   0.05519688   0.1741226
-    ## 2016 0.03103860 3.316090e-05     207.8281     127.7318   0.05539536   0.1725123
+    ## 2008 0.04170947 3.112647e-05     180.5184     102.8975   0.05565890   0.1846760
+    ## 2014 0.03430286 3.260728e-05     201.5922     122.5993   0.05562625   0.1756029
+    ## 2015 0.03246881 3.282994e-05     204.3736     126.2211   0.05550101   0.1727289
+    ## 2016 0.03086910 3.312136e-05     207.4354     129.5557   0.05541010   0.1731656
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.2171958      0.6534387   2.780388
-    ## 2014       0.2185886      0.6117949   2.844491
-    ## 2015       0.2189489      0.6053346   2.846406
-    ## 2016       0.2208107      0.6007165   2.852479
+    ## 2008       0.2181713      0.6388600   2.738278
+    ## 2014       0.2197373      0.6125787   2.849034
+    ## 2015       0.2191949      0.6031467   2.842770
+    ## 2016       0.2192440      0.5956588   2.866881
 
 The output of each model is a matrix with a row for each of the four
 sampling years, and a column for each of the nine summary statistics
@@ -828,4 +839,4 @@ In this plot, each row corresponds to the nine summary statistics and
 each column corresponds to the three dynamic parameters in the ABM (A:
 complexity, B: copying strength, C: distinctiveness strength).
 
-<img src="README_files/figure-gfm/unnamed-chunk-34-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-36-1.png" style="display: block; margin: auto;" />

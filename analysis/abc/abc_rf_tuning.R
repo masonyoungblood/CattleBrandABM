@@ -42,6 +42,9 @@ sum_stats <- do.call("rbind", lapply(1:length(main_simulations$sum_stats), funct
 #restructure obs stats
 obs_stats <- as.data.frame(t(obs_stats))
 
+#store priors in new object for transformation for random forest
+transf_priors <- main_simulations$priors
+
 #log transform complexity and strength params, and logit transform radii (functions adopted from abc package)
 logit_bounds <- c(0, 690)
 logit <- function(param, logit_bounds){
@@ -52,11 +55,11 @@ inv_logit <- function(param, logit_bounds){
   temp <- exp(param)/(1 + exp(param))
   return((temp*(logit_bounds[2] - logit_bounds[1])) + logit_bounds[1])
 }
-main_simulations$priors[, 1] <- log(main_simulations$priors[, 1])
-main_simulations$priors[, 2] <- logit(main_simulations$priors[, 2], logit_bounds)
-main_simulations$priors[, 3] <- logit(main_simulations$priors[, 3], logit_bounds)
-main_simulations$priors[, 4] <- log(main_simulations$priors[, 4])
-main_simulations$priors[, 5] <- log(main_simulations$priors[, 5])
+transf_priors[, 1] <- log(transf_priors[, 1])
+transf_priors[, 2] <- logit(transf_priors[, 2], logit_bounds)
+transf_priors[, 3] <- logit(transf_priors[, 3], logit_bounds)
+transf_priors[, 4] <- log(transf_priors[, 4])
+transf_priors[, 5] <- log(transf_priors[, 5])
 
 #set sample size for random forest (80% of data)
 sample_fraction <- 0.8
@@ -76,7 +79,7 @@ for(i in 1:5){
   set.seed(i)
   
   #construct data frame for random forest abc
-  abcrf_data <- data.frame(main_simulations$priors[, i], sum_stats = sum_stats)
+  abcrf_data <- data.frame(transf_priors[, i], sum_stats = sum_stats)
   colnames(abcrf_data)[1] <- "param"
   colnames(obs_stats) <- colnames(abcrf_data)[-1]
   
@@ -89,7 +92,7 @@ for(i in 1:5){
   cat(paste0(i, "..."))
   
   #save tuning
-  save(abc_rf_tuning, file = "old_code/abc_rf_tuning.RData")
+  save(abc_rf_tuning, file = "analysis/abc/abc_rf_tuning.RData")
 }
 
 #save recommended parameters

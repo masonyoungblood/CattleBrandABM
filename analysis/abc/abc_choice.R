@@ -41,9 +41,6 @@ obs_stats <- c(get_sum_stats(as.matrix(brands_2008), components, all_zips, angle
 #convert to data frame with same structure as vector of observed summary statistics
 sum_stats <- do.call("rbind", lapply(1:length(choice_simulations$sum_stats), function(x){c(t(as.matrix(choice_simulations$sum_stats[[x]])))}))
 
-#restructure obs stats
-obs_stats <- as.data.frame(t(obs_stats))
-
 #create reference table
 ref_table <- data.frame(index = as.factor(c(rep("null", 10000), rep("copy", 10000), rep("dist", 10000))), sum_stats = sum_stats)
 
@@ -60,4 +57,3 @@ abc_choice <- abcrf(index ~ ., data = ref_table, group = list("null", "copy", "d
 #predict model of observed sum stats
 abc_choice_prediction <- predict(abc_choice, obs = obs_stats, training = ref_table, sampsize = sample_size, ntree = 1000)
 save(abc_choice_prediction, file = "analysis/abc/abc_choice_prediction.RData")
-
