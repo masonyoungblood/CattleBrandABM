@@ -370,8 +370,8 @@ Now we need to remove brands that are duplicated within the same zip
 code and year. When this occurs it’s usually one family or ranch that
 has registered a single brand multiple times for different locations on
 the animal. In our model, duplicated brand codes will correspond to
-variations of the same combination of symbols independently of the
-location on the animal.
+variations of the same combination of symbols in the same order
+independently of the location on the animal.
 
 ``` r
 #get concatenated brands with duplicate codes
@@ -420,8 +420,13 @@ converted_brands[, 10] <- as.numeric(brands$year)
 
 #iterate through the brands
 for(i in 1:nrow(brands)){
-  #extract the index numbers of components (ignoring rotation), and replace empty values with 0
+  #extract the index numbers of components (ignoring rotation)
   brand_nums <- match(all_poss_components$index[match(brands$brand[[i]][1:4], all_poss_components$rot)], components)
+  
+  #store eventual numeric order of components
+  comp_order <- order(brand_nums)
+  
+  #replace empty values with 0
   brand_nums[is.na(brand_nums)] <- 0
   
   #create empty vector of angles
@@ -438,12 +443,12 @@ for(i in 1:nrow(brands)){
     if(length(temp) > 0){angle_nums[j] <- temp}
   }
   
-  #store numeric brands and angles in the matrix
-  converted_brands[i, 1:4] <- brand_nums
-  converted_brands[i, 5:8] <- angle_nums
+  #store numeric brands and angles in the matrix (components sorted in ascending numeric order, and angles re-ordered accordingly)
+  converted_brands[i, 1:4] <- brand_nums[comp_order]
+  converted_brands[i, 5:8] <- angle_nums[comp_order]
   
   #remove temporary objects
-  rm(list = c("brand_nums", "angle_nums", "temp"))
+  rm(list = c("brand_nums", "comp_order", "angle_nums", "temp"))
 }
 
 #rewrite brands and remove original brands
@@ -484,20 +489,20 @@ table(sapply(1:nrow(brands), function(x){length(which(brands[x, 1:4] != 0))}))
     ##   734 58722 19935  1672
 
 The total number of brands in the dataset, after removing duplicates
-within zip codes, is 81,063. For brands with two components, 2,092 of
-them only appear in 1990 (“old”) and 3,265 of them only appear in
-2008-2016 (“young”). For brands with three components, 1,408 of them are
-old and 4,925 of them are young. Only 2.06% of brands have four
+within zip codes, is 81,063. For brands with two components, 1,360 of
+them only appear in 1990 (“old”) and 2,412 of them only appear in
+2008-2016 (“young”). For brands with three components, 964 of them are
+old and 3,841 of them are young. Only 2.06% of brands have four
 components, and only 4.9% of component types are singletons (i.e. only
 appear once). Here is a further breakdown of the brands in terms of the
 four geographic quadrants described in the preregistration document, for
 each combination of age and complexity:
 
-    ##                NE  NW   SE   SW
-    ## 2-comp old    502 379  579  632
-    ## 3-comp old    279 220  448  461
-    ## 2-comp young  917 605 1060  683
-    ## 3-comp young 1239 806 1843 1037
+    ##               NE  NW   SE  SW
+    ## 2-comp old   336 241  376 407
+    ## 3-comp old   181 158  314 311
+    ## 2-comp young 663 433  784 532
+    ## 3-comp young 940 611 1438 852
 
 In short, we have ample sample size to conduct all of the analyses
 proposed in the preregistration document.
@@ -748,7 +753,7 @@ components_only <- cattlebrandABM(init_brands = as.matrix(brands_1990), componen
 Sys.time() - start
 ```
 
-    ## Time difference of 21.91012 secs
+    ## Time difference of 22.16633 secs
 
 ``` r
 #print output
@@ -756,15 +761,15 @@ components_only
 ```
 
     ##       comp_most  comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.09887626 0.002912600     66.18370     40.03761    0.3059882   0.3816356
-    ## 2014 0.08450389 0.003578778     74.83653     48.67253    0.3268308   0.3744006
-    ## 2015 0.08203643 0.003727908     76.34310     50.40145    0.3299585   0.3712185
-    ## 2016 0.07967256 0.003856215     77.65338     51.98125    0.3323567   0.3681340
+    ## 2008 0.09922935 0.002605015     65.68678     39.77038    0.3065569   0.3844707
+    ## 2014 0.08457390 0.003476556     74.79012     48.64492    0.3276838   0.3695784
+    ## 2015 0.08240111 0.003534992     76.12744     50.14451    0.3314543   0.3703421
+    ## 2016 0.08033946 0.003556636     77.43991     51.69644    0.3336300   0.3651682
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.7948376      0.8293283   2.639500
-    ## 2014       0.8256342      0.8046844   2.713235
-    ## 2015       0.8296395      0.7991179   2.754377
-    ## 2016       0.8326658      0.7868608   2.745843
+    ## 2008       0.7912773      0.8323246   2.632193
+    ## 2014       0.8286604      0.8132756   2.703515
+    ## 2015       0.8324878      0.8080903   2.708158
+    ## 2016       0.8350690      0.8020133   2.725012
 
 ``` r
 #test out the components and angles ABM (and get runtime)
@@ -776,7 +781,7 @@ components_angles <- cattlebrandABM(init_brands = as.matrix(brands_2008), compon
 Sys.time() - start
 ```
 
-    ## Time difference of 26.20283 secs
+    ## Time difference of 25.67604 secs
 
 ``` r
 #print output
@@ -784,15 +789,15 @@ components_angles
 ```
 
     ##       comp_most   comp_least comp_shannon comp_simpson comp_jac_zip comp_mh_zip
-    ## 2008 0.04170947 3.112647e-05     180.5184     102.8975   0.05565890   0.1846760
-    ## 2014 0.03430286 3.260728e-05     201.5922     122.5993   0.05562625   0.1756029
-    ## 2015 0.03246881 3.282994e-05     204.3736     126.2211   0.05550101   0.1727289
-    ## 2016 0.03086910 3.312136e-05     207.4354     129.5557   0.05541010   0.1731656
+    ## 2008 0.04477427 3.098565e-05     179.9434     100.3953   0.05503468   0.1739637
+    ## 2014 0.03536957 3.238971e-05     201.6338     121.7896   0.05564662   0.1772597
+    ## 2015 0.03394094 3.266693e-05     205.8041     125.5866   0.05544211   0.1748140
+    ## 2016 0.03279282 3.289149e-05     208.9336     128.8152   0.05541942   0.1747692
     ##      comp_jac_county comp_mh_county brand_edit
-    ## 2008       0.2181713      0.6388600   2.738278
-    ## 2014       0.2197373      0.6125787   2.849034
-    ## 2015       0.2191949      0.6031467   2.842770
-    ## 2016       0.2192440      0.5956588   2.866881
+    ## 2008       0.2185706      0.6522911   2.775694
+    ## 2014       0.2207688      0.6189537   2.907903
+    ## 2015       0.2207465      0.6061112   2.857892
+    ## 2016       0.2210243      0.5992175   2.889207
 
 The output of each model is a matrix with a row for each of the four
 sampling years, and a column for each of the nine summary statistics

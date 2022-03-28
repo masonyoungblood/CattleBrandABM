@@ -26,9 +26,9 @@ brand_generator <- function(brands, components, zip, zip_dists, rot_prob, comple
   #generate frequencies of components within the dist radius, where missing components are assigned 0
   dist_components <- (as.numeric(Rfast::Table(c(0:nrow(components), brands[dist_rows, 1:4])))-1)[-1]
   
-  #sample up to four components, weighted by the copy and dist probability function, where the number of components is drawn from a poisson distribution with a lambda equal to "complexity"
-  sim_brand <- sample(1:nrow(components), sample(1:4, 1, prob = dpois(c(1, 2, 3, 4), complexity)), replace = TRUE, prob = ((copy_components+1)^copy_strength)*((1/(dist_components+1))^dist_strength))
-
+  #sample up to four components, sorted in ascending order, weighted by the copy and dist probability function, where the number of components is drawn from a poisson distribution with a lambda equal to "complexity"
+  sim_brand <- Rfast::Sort(sample(1:nrow(components), sample(1:4, 1, prob = dpois(c(1, 2, 3, 4), complexity)), replace = TRUE, prob = ((copy_components+1)^copy_strength)*((1/(dist_components+1))^dist_strength)))
+  
   #if angles are to be considered
   if(angles){
     #generate frequencies of angles, nested for each component of the brand, within the copy radius, where missing angles are assigned 0
@@ -119,12 +119,12 @@ get_sum_stats <- function(running_brands, components, all_zips, angles = FALSE, 
   if(!angles){
     #if edit distances are to be calculated and included in summary statistics, then calculate them
     if(edit_dist_prop > 0){
-      #construct matrix of edit distances
+      #construct matrix of edit distances, sorting not required because all brands are sorted in the ABM
       edit_dist_mat <- adist(sapply(sample(nrow(running_brands), nrow(running_brands)*edit_dist_prop, replace = FALSE), function(x){intToUtf8(running_brands[x, 1:4])}))
     }
     
     #get component frequencies
-    comp_freqs <- as.numeric(sort(Rfast::Table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), decreasing = TRUE))
+    comp_freqs <- as.numeric(Rfast::Sort(Rfast::Table(c(running_brands[, 1:4])[which(c(running_brands[, 1:4]) > 0)]), descending = TRUE))
     
     #construct components by zip codes matrix
     comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
@@ -169,7 +169,7 @@ get_sum_stats <- function(running_brands, components, all_zips, angles = FALSE, 
     comp_angle_combos <- comp_angle_combos[-which(comp_angle_combos == "0 0")]
     
     #get component frequencies (where rotated components are treated as unique)
-    comp_freqs <- as.numeric(sort(Rfast::Table(comp_angle_combos), decreasing = TRUE))
+    comp_freqs <- as.numeric(Rfast::Sort(Rfast::Table(comp_angle_combos), descending = TRUE))
     
     #construct components by zip codes matrix
     comp_beta_zip_mat <- t(sapply(1:length(all_zips$zip), function(x){
@@ -226,16 +226,3 @@ get_sum_stats <- function(running_brands, components, all_zips, angles = FALSE, 
   #return summary statistics
   return(sum_stats)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

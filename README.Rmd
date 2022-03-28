@@ -361,7 +361,7 @@ load("location_data/all_zips.RData")
 load("location_data/zip_dists.RData")
 ```
 
-Now we need to remove brands that are duplicated within the same zip code and year. When this occurs it's usually one family or ranch that has registered a single brand multiple times for different locations on the animal. In our model, duplicated brand codes will correspond to variations of the same combination of symbols independently of the location on the animal.
+Now we need to remove brands that are duplicated within the same zip code and year. When this occurs it's usually one family or ranch that has registered a single brand multiple times for different locations on the animal. In our model, duplicated brand codes will correspond to variations of the same combination of symbols in the same order independently of the location on the animal.
 
 ```{r eval=FALSE}
 #get concatenated brands with duplicate codes
@@ -402,8 +402,13 @@ converted_brands[, 10] <- as.numeric(brands$year)
 
 #iterate through the brands
 for(i in 1:nrow(brands)){
-  #extract the index numbers of components (ignoring rotation), and replace empty values with 0
+  #extract the index numbers of components (ignoring rotation)
   brand_nums <- match(all_poss_components$index[match(brands$brand[[i]][1:4], all_poss_components$rot)], components)
+  
+  #store eventual numeric order of components
+  comp_order <- order(brand_nums)
+  
+  #replace empty values with 0
   brand_nums[is.na(brand_nums)] <- 0
   
   #create empty vector of angles
@@ -420,12 +425,12 @@ for(i in 1:nrow(brands)){
     if(length(temp) > 0){angle_nums[j] <- temp}
   }
   
-  #store numeric brands and angles in the matrix
-  converted_brands[i, 1:4] <- brand_nums
-  converted_brands[i, 5:8] <- angle_nums
+  #store numeric brands and angles in the matrix (components sorted in ascending numeric order, and angles re-ordered accordingly)
+  converted_brands[i, 1:4] <- brand_nums[comp_order]
+  converted_brands[i, 5:8] <- angle_nums[comp_order]
   
   #remove temporary objects
-  rm(list = c("brand_nums", "angle_nums", "temp"))
+  rm(list = c("brand_nums", "comp_order", "angle_nums", "temp"))
 }
 
 #rewrite brands and remove original brands
@@ -628,7 +633,7 @@ subsets <- list(o_ne_2 = o_ne_2, o_ne_2_mixed = o_ne_2_mixed, o_ne_3 = o_ne_3, o
                 y_se_2 = y_se_2, y_se_2_mixed = y_se_2_mixed, y_se_3 = y_se_3, y_se_3_mixed = y_se_3_mixed,
                 o_sw_2 = o_sw_2, o_sw_2_mixed = o_sw_2_mixed, o_sw_3 = o_sw_3, o_sw_3_mixed = o_sw_3_mixed,
                 y_sw_2 = y_sw_2, y_sw_2_mixed = y_sw_2_mixed, y_sw_3 = y_sw_3, y_sw_3_mixed = y_sw_3_mixed)
-save(subsets, file = "analysis/subsets.RData")
+save(subsets, file = "analysis/shuffling_model/subsets.RData")
 ```
 
 ```{r echo = FALSE}
@@ -885,5 +890,3 @@ plots[[27]] <- plots[[27]] + ggplot2::theme(axis.title.x = ggplot2::element_text
 
 cowplot::plot_grid(plotlist = plots, nrow = 9, byrow = FALSE, label_x = c(1, 2, 3))
 ```
-
-

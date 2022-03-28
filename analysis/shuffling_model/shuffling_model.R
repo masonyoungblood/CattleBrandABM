@@ -13,13 +13,13 @@ shuffling_model <- function(matrix, n_components){
     real_matrix <- matrix[, 1:2]
     
     #reorder components within rows so order matters
-    real_matrix <- do.call(rbind, lapply(1:nrow(real_matrix), function(x){sort(real_matrix[x, ])}))
+    #real_matrix <- do.call(rbind, lapply(1:nrow(real_matrix), function(x){sort(real_matrix[x, ])}))
     
     #simulate all possible brands given the components in subset
     sim_matrix <- expand.grid(sort(unique(c(real_matrix))), sort(unique(c(real_matrix))))
     
-    #reordercomponents within rows so order matters
-    sim_matrix <- do.call(rbind, lapply(1:nrow(sim_matrix), function(x){sort(as.numeric(sim_matrix[x, ]))}))
+    #reorder components within rows so order matters
+    #sim_matrix <- do.call(rbind, lapply(1:nrow(sim_matrix), function(x){sort(as.numeric(sim_matrix[x, ]))}))
     
     #iterate through simulated brands
     output <- lapply(1:nrow(sim_matrix), function(x){
@@ -139,4 +139,4 @@ shuffling_data <- mclapply(1:length(subsets), function(i){
 shuffling_data <- do.call(rbind, shuffling_data)
 
 #save it
-save(shuffling_data, file = "analysis/shuffling_model/shuffling_data.RData")
+save(shuffling_data, file = "analysis/shuffling_model/shuffling_data_order.RData")

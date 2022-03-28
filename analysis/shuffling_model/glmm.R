@@ -5,7 +5,7 @@ library(DHARMa)
 library(lme4)
 library(specr)
 library(cowplot)
-load("analysis/shuffling_model/shuffling_data.RData")
+load("analysis/shuffling_model/shuffling_data_order.RData")
 
 #data is zero inflated (8.5% of values)
 length(which(shuffling_data$prob_score == 0))/nrow(shuffling_data)
@@ -36,8 +36,10 @@ performance::icc(brand_model)
 
 #add fixed effects and controls to models
 complexity_model <- lmer(prob_score ~ complexity + (1|brand), data = shuffling_data)
-actual_model <- lmer(prob_score ~ actual + complexity + (1|brand), data = shuffling_data)
-mixed_model <- lmer(prob_score ~ complexity + actual*mixed + (1|brand), data = shuffling_data)
+#actual_model <- lmer(prob_score ~ complexity + actual + (1|brand), data = shuffling_data)
+actual_model <- lmer(prob_score ~ actual + (1|brand), data = shuffling_data)
+#mixed_model <- lmer(prob_score ~ complexity + actual*mixed + (1|brand), data = shuffling_data)
+mixed_model <- lmer(prob_score ~ actual*mixed + (1|brand), data = shuffling_data)
 
 #get WAIC values for competing models
 #brand_waic <- blmeco::WAIC(brand_model)
@@ -49,23 +51,18 @@ mixed_model <- lmer(prob_score ~ complexity + actual*mixed + (1|brand), data = s
 load("analysis/shuffling_model/waic.RData")
 
 #compare WAIC values
-waic$brand_waic$WAIC1
-waic$complexity_waic$WAIC1
-waic$actual_waic$WAIC1
-waic$mixed_waic$WAIC1
+waic$brand_waic$WAIC1 - waic$complexity_waic$WAIC1
+waic$complexity_waic$WAIC1 - waic$actual_waic$WAIC1
+waic$actual_waic$WAIC1 - waic$mixed_waic$WAIC1
 
 #get model estimates from mixed model
 summary(mixed_model)
-mixed_model_confints <- confint(mixed_model)
+mixed_model_confints <- confint(mixed_model, method = "boot", nsim = 50, oldNames = FALSE)
 mixed_model_confints
 
 #do traditional checks (look good)
 plot(mixed_model)
 qqnorm(residuals(mixed_model))
-
-#do DHARMa checks (do not look good, so we should re-run a bayesian version of the full model)
-simres <- simulateResiduals(mixed_model)
-plot(simres)
 
 #specification curve analysis: https://masurp.github.io/specr/articles/random_effects.html
 null <- function(formula, data, ...){
