@@ -23,7 +23,6 @@ obs_sum_stats <- c(get_sum_stats(as.matrix(brands_2008), components, all_zips, a
                    get_sum_stats(as.matrix(brands_2015), components, all_zips, angles = FALSE),
                    get_sum_stats(as.matrix(brands_2016), components, all_zips, angles = FALSE))
 
-
 #convert to data frame with same structure as vector of observed summary statistics
 sum_stats_a <- do.call("rbind", lapply(1:length(prior_simulations$sum_stats), function(x){c(t(as.matrix(prior_simulations$sum_stats[[x]])))}))
 sum_stats_b <- do.call("rbind", lapply(1:length(prior_simulations_angles$sum_stats), function(x){c(t(as.matrix(prior_simulations_angles$sum_stats[[x]])))}))

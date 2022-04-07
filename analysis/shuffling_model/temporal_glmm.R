@@ -17,7 +17,7 @@ ne_data$time <- c(rep("o", nrow(subsets$o_ne_2)), rep("o", nrow(subsets$o_ne_3))
 #calculate dists
 ne_dists <- adist(sapply(1:nrow(ne_data), function(x){intToUtf8(as.numeric(ne_data[x, 1:4]))}))
 
-#iterate through the upper triangle and convert do a list of data frames, then combine
+#iterate through the upper triangle and convert to a list of data frames, then combine
 ne_data <- lapply(1:(nrow(ne_data)-1), function(i){
   temp_dists <- ne_dists[i, (i+1):nrow(ne_data)]
   temp_brand_a <- rep(ne_data$brand[i], length(temp_dists))
@@ -103,13 +103,12 @@ data$brand_b <- as.factor(data$brand_b)
 # binom_fit <- fitdist(data = data$dist, dist = "binom", fix.arg = list(size = 3), start = list(prob = 0.5))
 # plot(binom_fit)
 
-#set size, or number of trials, for binomial distribution
-size <- max(data$dist)
+#frequentist version
+temporal_glmm <- glmer(cbind(dist, 3-dist) ~ (1|brand_a) + (1|brand_b) + oo + yy, data = data, family = binomial())
+save(temporal_glmm, file = "analysis/shuffling_model/temporal_glmm.RData")
 
-# #frequentist version
-# temporal_glmm <- glmer(cbind(dist, size-dist) ~ (1|brand_a) + (1|brand_b) + oo + yy, data = data, family = binomial())
-# save(temporal_glmm, file = "temporal_glmm.RData")
-# load("temporal_glmm.RData")
+#get confidence intervals
+confint(temporal_glmm, parm = c("oo", "yy"), method = "Wald")
 
 #bayesian version
 temporal_bayesian_glmm <- brm(data = data, family = binomial(),
