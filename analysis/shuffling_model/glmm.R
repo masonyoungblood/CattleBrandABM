@@ -5,9 +5,9 @@ library(DHARMa)
 library(lme4)
 library(specr)
 library(cowplot)
-load("analysis/shuffling_model/shuffling_data_order.RData")
+load("analysis/shuffling_model/shuffling_data.RData")
 
-#data is zero inflated (8.5% of values)
+#data is zero inflated (9.1% of values)
 length(which(shuffling_data$prob_score == 0))/nrow(shuffling_data)
 
 #drop zeroes from the data
@@ -36,18 +36,16 @@ performance::icc(brand_model)
 
 #add fixed effects and controls to models
 complexity_model <- lmer(prob_score ~ complexity + (1|brand), data = shuffling_data)
-#actual_model <- lmer(prob_score ~ complexity + actual + (1|brand), data = shuffling_data)
-actual_model <- lmer(prob_score ~ actual + (1|brand), data = shuffling_data)
-#mixed_model <- lmer(prob_score ~ complexity + actual*mixed + (1|brand), data = shuffling_data)
-mixed_model <- lmer(prob_score ~ actual*mixed + (1|brand), data = shuffling_data)
+actual_model <- lmer(prob_score ~ complexity + actual + (1|brand), data = shuffling_data)
+mixed_model <- lmer(prob_score ~ complexity + actual*mixed + (1|brand), data = shuffling_data)
 
-#get WAIC values for competing models
-#brand_waic <- blmeco::WAIC(brand_model)
-#complexity_waic <- blmeco::WAIC(complexity_model)
-#actual_waic <- blmeco::WAIC(actual_model)
-#mixed_waic <- blmeco::WAIC(mixed_model)
-#waic <- list(brand_waic = brand_waic, complexity_waic = complexity_waic, actual_waic = actual_waic, mixed_waic = mixed_waic)
-#save(waic, file = "analysis/shuffling_model/waic.RData")
+# #get WAIC values for competing models
+# brand_waic <- blmeco::WAIC(brand_model)
+# complexity_waic <- blmeco::WAIC(complexity_model)
+# actual_waic <- blmeco::WAIC(actual_model)
+# mixed_waic <- blmeco::WAIC(mixed_model)
+# waic <- list(brand_waic = brand_waic, complexity_waic = complexity_waic, actual_waic = actual_waic, mixed_waic = mixed_waic)
+# save(waic, file = "analysis/shuffling_model/waic.RData")
 load("analysis/shuffling_model/waic.RData")
 
 #compare WAIC values

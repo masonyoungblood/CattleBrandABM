@@ -103,19 +103,19 @@ data$brand_b <- as.factor(data$brand_b)
 # binom_fit <- fitdist(data = data$dist, dist = "binom", fix.arg = list(size = 3), start = list(prob = 0.5))
 # plot(binom_fit)
 
-#frequentist version
-temporal_glmm <- glmer(cbind(dist, 3-dist) ~ (1|brand_a) + (1|brand_b) + oo + yy, data = data, family = binomial())
-save(temporal_glmm, file = "analysis/shuffling_model/temporal_glmm.RData")
-
-#get confidence intervals
-confint(temporal_glmm, parm = c("oo", "yy"), method = "Wald")
+# #frequentist version
+# temporal_glmm <- glmer(cbind(dist, 3-dist) ~ (1|brand_a) + (1|brand_b) + oo + yy, data = data, family = binomial())
+# save(temporal_glmm, file = "analysis/shuffling_model/temporal_glmm.RData")
+# 
+# #get confidence intervals
+# confint(temporal_glmm, parm = c("oo", "yy"), method = "Wald")
 
 #bayesian version
 temporal_bayesian_glmm <- brm(data = data, family = binomial(),
                               dist | trials(3) ~ (1|brand_a) + (1|brand_b) + oo + yy,
                               prior = c(prior(normal(0, 1), class = Intercept),
                                         prior(normal(0, 0.5), class = b)),
-                              algorithm = "meanfield", output_samples = 2000)
-save(temporal_bayesian_glmm, file = "temporal_bayesian_glmm.RData")
+                              algorithm = "meanfield", output_samples = 5000, iter = 50000, tol_rel_obj = 0.00001)
+save(temporal_bayesian_glmm, file = "analysis/shuffling_model/temporal_bayesian_glmm.RData")
 
 

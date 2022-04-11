@@ -79,10 +79,10 @@ to_mix <- to_mix[order(to_mix[, 10]), ]
 
 #separate brands data by year
 brands_1990 <- data.table::data.table(brands[which(brands[, 10] == 1990), 1:9])
-brands_2008 <- data.table::data.table(brands[which(to_mix[, 10] == 2008), 1:9])
-brands_2014 <- data.table::data.table(brands[which(to_mix[, 10] == 2014), 1:9])
-brands_2015 <- data.table::data.table(brands[which(to_mix[, 10] == 2015), 1:9])
-brands_2016 <- data.table::data.table(brands[which(to_mix[, 10] == 2016), 1:9])
+brands_2008 <- data.table::data.table(to_mix[which(to_mix[, 10] == 2008), 1:9])
+brands_2014 <- data.table::data.table(to_mix[which(to_mix[, 10] == 2014), 1:9])
+brands_2015 <- data.table::data.table(to_mix[which(to_mix[, 10] == 2015), 1:9])
+brands_2016 <- data.table::data.table(to_mix[which(to_mix[, 10] == 2016), 1:9])
 
 #get vector of observed summary statistics
 obs_stats <- c(get_sum_stats(as.matrix(brands_2008), components, all_zips, angles = FALSE),
@@ -154,10 +154,31 @@ i <- i + 1
 # -------------------------------------------------------------------------
 
 #load saved predictions
+load("analysis/abc/abc_rf_predictions.RData")
 load("analysis/abc/abc_rf_mixed_predictions.RData")
 
-#construct predictions table, with mse because (1) nmae is inf for radii and (2) it can be easily back-transformed
-predictions_table <- data.frame(median = c(exp(as.numeric(abc_rf_mixed_predictions[[1]]$prediction$med)),
+#construct predictions tables, with mse because (1) nmae is inf for radii and (2) it can be easily back-transformed
+predictions_table <- data.frame(median = c(exp(as.numeric(abc_rf_predictions[[1]]$prediction$med)),
+                                                 inv_logit(as.numeric(abc_rf_predictions[[2]]$prediction$med), logit_bounds),
+                                                 inv_logit(as.numeric(abc_rf_predictions[[3]]$prediction$med), logit_bounds),
+                                                 exp(as.numeric(abc_rf_predictions[[4]]$prediction$med)),
+                                                 exp(as.numeric(abc_rf_predictions[[5]]$prediction$med))),
+                                      low_quant = c(exp(as.numeric(abc_rf_predictions[[1]]$prediction$quantiles[1])),
+                                                    inv_logit(as.numeric(abc_rf_predictions[[2]]$prediction$quantiles[1]), logit_bounds),
+                                                    inv_logit(as.numeric(abc_rf_predictions[[3]]$prediction$quantiles[1]), logit_bounds),
+                                                    exp(as.numeric(abc_rf_predictions[[4]]$prediction$quantiles[1])),
+                                                    exp(as.numeric(abc_rf_predictions[[5]]$prediction$quantiles[1]))),
+                                      high_quant = c(exp(as.numeric(abc_rf_predictions[[1]]$prediction$quantiles[2])),
+                                                     inv_logit(as.numeric(abc_rf_predictions[[2]]$prediction$quantiles[2]), logit_bounds),
+                                                     inv_logit(as.numeric(abc_rf_predictions[[3]]$prediction$quantiles[2]), logit_bounds),
+                                                     exp(as.numeric(abc_rf_predictions[[4]]$prediction$quantiles[2])),
+                                                     exp(as.numeric(abc_rf_predictions[[5]]$prediction$quantiles[2]))),
+                                      rmsle = c(sqrt(as.numeric(abc_rf_predictions[[1]]$OOB_MSE)),
+                                                sqrt(as.numeric(abc_rf_predictions[[2]]$OOB_MSE)),
+                                                sqrt(as.numeric(abc_rf_predictions[[3]]$OOB_MSE)),
+                                                sqrt(as.numeric(abc_rf_predictions[[4]]$OOB_MSE)),
+                                                sqrt(as.numeric(abc_rf_predictions[[5]]$OOB_MSE))))
+predictions_table_mixed <- data.frame(median = c(exp(as.numeric(abc_rf_mixed_predictions[[1]]$prediction$med)),
                                            inv_logit(as.numeric(abc_rf_mixed_predictions[[2]]$prediction$med), logit_bounds),
                                            inv_logit(as.numeric(abc_rf_mixed_predictions[[3]]$prediction$med), logit_bounds),
                                            exp(as.numeric(abc_rf_mixed_predictions[[4]]$prediction$med)),
@@ -181,21 +202,25 @@ predictions_table <- data.frame(median = c(exp(as.numeric(abc_rf_mixed_predictio
 #plot
 xlabs <- list(expression(Complexity~"("*italic(paste(lambda))*")"), expression(Copy~Radius~"("*italic(R[C])*")"), expression(Dist~Radius~"("*italic(R[D])*")"), expression(Copy~Strength~"("*italic(C)*")"), expression(Dist~Strength~"("*italic(D)*")"))
 xlims <- list(c(0, 8), c(1, 689), c(1, 689), c(0, 10), c(0, 10))
-group_lines <- c("1" = "dotted", "0" = "solid")
+group_lines <- c("0" = "dotted", "1" = "solid", "2" = "solid")
+group_colors <- c("0" = "black", "1" = "#0072B2", "2" = "#D55E00")
 for(i in 1:ncol(transf_priors)){
   if(i %in% c(1, 4, 5)){
-    temp <- density(exp(transf_priors[, i]), weights = abc_rf_mixed_predictions[[i]]$weights)
-    prior <- data.frame(value = density(exp(transf_priors[, i]))$x, density = density(exp(transf_priors[, i]))$y, id = 0, lt = 1)
+    temp <- density(exp(transf_priors[, i]), weights = abc_rf_predictions[[i]]$weights)
+    temp_mixed <- density(exp(transf_priors[, i]), weights = abc_rf_mixed_predictions[[i]]$weights)
+    prior <- data.frame(value = density(exp(transf_priors[, i]))$x, density = density(exp(transf_priors[, i]))$y, id = 0, lt = 0, color = 0)
   } else{
-    temp <- density(inv_logit(transf_priors[, i], logit_bounds = logit_bounds), weights = abc_rf_mixed_predictions[[i]]$weights)
-    prior <- data.frame(value = density(inv_logit(transf_priors[, i], logit_bounds = logit_bounds))$x, density = density(inv_logit(transf_priors[, i], logit_bounds = logit_bounds))$y, id = 0, lt = 1)
+    temp <- density(inv_logit(transf_priors[, i], logit_bounds = logit_bounds), weights = abc_rf_predictions[[i]]$weights)
+    temp_mixed <- density(inv_logit(transf_priors[, i], logit_bounds = logit_bounds), weights = abc_rf_mixed_predictions[[i]]$weights)
+    prior <- data.frame(value = density(inv_logit(transf_priors[, i], logit_bounds = logit_bounds))$x, density = density(inv_logit(transf_priors[, i], logit_bounds = logit_bounds))$y, id = 0, lt = 0, color = 0)
   }
-  posterior <- data.frame(value = temp$x, density = temp$y, id = 1, lt = 0)
-  combined <- rbind(posterior, prior)
-  plot <- ggplot(combined) + geom_line(mapping = aes(x = value, y = density, group = id, linetype = as.factor(lt))) + 
+  posterior <- data.frame(value = temp$x, density = temp$y, id = 1, lt = 1, color = 1)
+  posterior_mixed <- data.frame(value = temp_mixed$x, density = temp_mixed$y, id = 2, lt = 2, color = 2)
+  combined <- rbind(posterior, posterior_mixed, prior)
+  plot <- ggplot(combined) + geom_line(mapping = aes(x = value, y = density, group = id, linetype = as.factor(lt), color = as.factor(color))) + 
     labs(x = xlabs[[i]], y = "Density") + xlim(xlims[[i]]) + 
-    theme_linedraw() + 
-    scale_linetype_manual(name = NULL, values = group_lines, labels = c("Prior", "Posterior"))
+    theme_linedraw() + scale_color_manual(guide = "none", name = NULL, values = group_colors) + 
+    scale_linetype_manual(name = NULL, values = group_lines, labels = c("Prior", "Posterior", "Mixed"), guide = guide_legend(override.aes = list(color = group_colors)))
   assign(names(transf_priors)[i], plot)
 }
 

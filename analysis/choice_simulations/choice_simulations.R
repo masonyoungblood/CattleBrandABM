@@ -61,7 +61,7 @@ for(i in 1:3){
   if(i == 3){priors <- data.frame(complexity = rgamma(n_sim, shape = 0.9, rate = 0.2), copy_radius = rep(max_dist, n_sim), dist_radius = rep(max_dist, n_sim), copy_strength = 0, dist_strength = 1)}
   
   #run simulations without angles
-  slurm <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "main",
+  slurm <- rslurm::slurm_apply(cattlebrandABM_slurm, priors, jobname = "choice",
                                nodes = 4, cpus_per_node = 25, pkgs = pkgs, global_objects = objects())
   
   #get output and clean files
